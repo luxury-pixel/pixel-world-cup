@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Achat – Pixel World Cup</title>
+  <style>
+    body{
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 40px;
+      background-color: #fafafa;
+    }
+    section{
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 20px;
+      max-width: 600px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+    }
+    h1{ color: #222; }
+    label{
+      display: block;
+      margin-top: 8px;
+      font-weight: 600;
+    }
+    input{
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button{
+      margin-top: 12px;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #0070f3;
+      color: white;
+      font-size: 15px;
+    }
+    button:hover{ background-color: #005ec2; }
+    #rectMsg{ margin-top: 12px; color: #333; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+  <h1>Achat de blocs (rectangle)</h1>
+
+  <section>
+    <p>Entre un rectangle de pixels (10×10 px par case). Le prix par case commence à 100 € et double à chaque revente.</p>
+
+    <label>Email</label>
+    <input id="rectEmail" type="email" placeholder="ton.email@example.com" />
+
+    <div style="display:flex; gap:10px; margin-top:10px;">
+      <div style="flex:1">
+        <label>X</label>
+        <input id="rectX" type="number" value="10" min="0">
+      </div>
+      <div style="flex:1">
+        <label>Y</label>
+        <input id="rectY" type="number" value="10" min="0">
+      </div>
+    </div>
+
+    <div style="display:flex; gap:10px; margin-top:10px;">
+      <div style="flex:1">
+        <label>Largeur (W)</label>
+        <input id="rectW" type="number" value="20" min="1">
+      </div>
+      <div style="flex:1">
+        <label>Hauteur (H)</label>
+        <input id="rectH" type="number" value="20" min="1">
+      </div>
+    </div>
+
+    <button id="rectQuote">💰 Calculer le prix</button>
+    <button id="rectPay">💳 Payer via Stripe</button>
+
+    <div id="rectMsg"></div>
+  </section>
+
+  <script>
+    // Si tu ouvres via Live Server (5500), on appelle l'API en 4242.
+    const API_BASE = (location.port === '4242') ? '' : 'http://localhost:4242';
+
+    async function postJSON(url, body){
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify(body)
+      });
+      const data = await r.json().catch(()=> ({}));
+      return { ok: r.ok, data };
+    }
+
+    const el = {
+      email: document.getElementById('rectEmail'),
+      x: document.getElementById('rectX'),
+      y: document.getElementById('rectY'),
+      w: document.getElementById('rectW'),
+      h: document.getElementById('rectH'),
+      quote: document.getElementById('rectQuote'),
+      pay: document.getElementById('rectPay'),
+      msg: document.getElementById('rectMsg')
+    };
+
+    // 🧠 Essaie de lire la sélection venant de index.html
+    function loadSelectionFromSession(){
+      try {
+        const raw = sessionStorage.getItem('pwc-last-order');
+        if (!raw) return null;
+        const obj = JSON.parse(raw);
+        const cells = Array.isArray(obj?.cells) ? obj.cells : [];
+        if (!cells.length) return null;
+        let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+        for (const c of cells) {
+          if (typeof c.x==='number' && typeof c.y==='number'){
+            minX=Math.min(minX,c.x); minY=Math.min(minY,c.y);
+            maxX=Math.max(maxX,c.x); maxY=Math.max(maxY,c.y);
+          }
+        }
+        if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) return null;
+        return { x:minX, y:minY, w:(maxX-minX+1), h:(maxY-minY+1) };
+      } catch { return null; }
+    }
+
+    async function doQuoteAndShow(payload){
+      const { ok, data } = await postJSON(`${API_BASE}/api/purchase-rect/quote`, payload);
+      if (!ok){ el.msg.textContent = '❌ ' + (data.error || 'Erreur lors du devis'); return false; }
+      el.msg.textContent = `✅ Devis : ${data.newCells} cases neuves, ${data.overlappedCells} recouvertes, total ${(data.totalCents/100).toFixed(2)} €`;
+      return true;
+    }
+
+    async function doCheckout(payload){
+      el.msg.textContent = '⏳ Création de la session Stripe...';
+      const { ok, data } = await postJSON(`${API_BASE}/api/purchase-rect/checkout`, payload);
+      if (!ok || !data.ok){ el.msg.textContent = '❌ ' + (data.error || 'Erreur de paiement'); return; }
+      window.location.href = data.url; // redirection vers Stripe
+    }
+
+    el.quote.addEventListener('click', async ()=>{
+      const payload = { buyerEmail: el.email.value.trim(), x:+el.x.value, y:+el.y.value, w:+el.w.value, h:+el.h.value };
+      if (!payload.buyerEmail){ el.msg.textContent = '⚠️ Merci de mettre ton email.'; return; }
+      await doQuoteAndShow(payload);
+    });
+
+    el.pay.addEventListener('click', async ()=>{
+      const payload = { buyerEmail: el.email.value.trim(), x:+el.x.value, y:+el.y.value, w:+el.w.value, h:+el.h.value };
+      if (!payload.buyerEmail){ el.msg.textContent = '⚠️ Merci de mettre ton email.'; return; }
+      const okQuote = await doQuoteAndShow(payload);
+      if (okQuote) await doCheckout(payload);
+    });
+
+    // 🚀 Auto-préremplir depuis la sélection précédente (index.html)
+    (async function autoPrefill(){
+      const rect = loadSelectionFromSession();
+      if (!rect) return; // pas de sélection en mémoire, on laisse les valeurs par défaut
+      el.x.value = rect.x;
+      el.y.value = rect.y;
+      el.w.value = rect.w;
+      el.h.value = rect.h;
+      // tu saisis l'email et tu cliques payer (ou on peut déclencher auto si tu veux)
+    })();
+  </script>
+
+</body>
+</html>
+
