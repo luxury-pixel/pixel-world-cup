@@ -1,16 +1,18 @@
 // server_rect_routes.js
-const fs   = require('fs');
+const fs = require('fs');
 const path = require('path');
 
 function attachRectRoutes(app, opts = {}) {
   const dbPath = opts.dbPath || path.join(__dirname, 'data', 'db.json');
 
-  const GRID_W  = parseInt(process.env.GRID_W  || '100', 10);
-  const GRID_H  = parseInt(process.env.GRID_H  || '100', 10);
-  const BASE_CELL_CENTS     = parseInt(process.env.BASE_CELL_CENTS || '10000', 10); // 100 € en cents
-  const PRICE_MULTIPLIER    = parseFloat(process.env.PRICE_MULTIPLIER || '2');
-  const FUSION_FACTOR       = parseFloat(process.env.FUSION_FACTOR   || '1.3');
-  const CURRENCY            = process.env.CURRENCY || 'eur';
+  // valeurs par défaut
+  const GRID_W = parseInt(process.env.GRID_W || '100', 10);
+  const GRID_H = parseInt(process.env.GRID_H || '100', 10);
+  // 💰 100 € = 10000 cents
+  const BASE_CELL_CENTS = parseInt(process.env.BASE_CELL_CENTS || '10000', 10);
+  const PRICE_MULTIPLIER = parseFloat(process.env.PRICE_MULTIPLIER || '2');
+  const FUSION_FACTOR = parseFloat(process.env.FUSION_FACTOR || '1.3');
+  const CURRENCY = process.env.CURRENCY || 'eur';
   const MAX_LAYERS_PER_CELL = parseInt(process.env.MAX_LAYERS_PER_CELL || '2', 10);
 
   // s'assurer que le dossier existe
@@ -30,96 +32,114 @@ function attachRectRoutes(app, opts = {}) {
     fs.writeFileSync(dbPath, JSON.stringify(db, null, 2), 'utf8');
   }
 
-  function computeCellPriceCents(history) {
-    if (!history || history.length === 0) {
+  // prix d’UNE case en fonction de son historique
+  function computeCellPriceCents(cellHistory) {
+    if (!cellHistory || cellHistory.length === 0) {
       return BASE_CELL_CENTS;
     }
-    const last = history[history.length - 1];
+    const last = cellHistory[cellHistory.length - 1];
     return Math.round(last.priceCents * PRICE_MULTIPLIER);
   }
 
-  // devis
-  app.post('/api/purchase-rect/quote', (req, res) => {
-    try {
-      const { x, y, w, h, buyerEmail } = req.body || {};
+  // 🔵 on fabrique une fonction réutilisable (serveur ET route)
+  function calcRectQuote({ x, y, w, h, buyerEmail }) {
+    if (
+      typeof x !== 'number' ||
+      typeof y !== 'number' ||
+      typeof w !== 'number' ||
+      typeof h !== 'number'
+    ) {
+      return { ok: false, status: 400, error: 'coords_invalides' };
+    }
+    if (!buyerEmail) {
+      return { ok: false, status: 400, error: 'buyerEmail_requis' };
+    }
+    if (x < 0 || y < 0 || x + w > GRID_W || y + h > GRID_H) {
+      return { ok: false, status: 400, error: 'hors_grille' };
+    }
 
-      if (typeof x !== 'number' || typeof y !== 'number' ||
-          typeof w !== 'number' || typeof h !== 'number') {
-        return res.status(400).json({ error: 'coords_invalides' });
-      }
-      if (!buyerEmail) {
-        return res.status(400).json({ error: 'buyerEmail_requis' });
-      }
-      if (x < 0 || y < 0 || x + w > GRID_W || y + h > GRID_H) {
-        return res.status(400).json({ error: 'hors_grille' });
-      }
+    const db = readDB();
 
-      const db = readDB();
+    let totalCents = 0;
+    let newCells = 0;
+    let overlappedCells = 0;
 
-      let totalCents = 0;
-      let newCells = 0;
-      let overlappedCells = 0;
+    // règle “le premier délimite le lot”
+    let requiredLotW = null;
+    let requiredLotH = null;
 
-      // règle du "premier délimite le lot"
-      let requiredLotW = null;
-      let requiredLotH = null;
-
-      for (let yy = y; yy < y + h; yy++) {
-        for (let xx = x; xx < x + w; xx++) {
-          const key = `${xx}:${yy}`;
-          const history = db.cells[key];
-          if (history && history.length > 0) {
-            const first = history[0];
-            if (first.lotW && first.lotH) {
-              requiredLotW = first.lotW;
-              requiredLotH = first.lotH;
-            }
+    for (let yy = y; yy < y + h; yy++) {
+      for (let xx = x; xx < x + w; xx++) {
+        const key = `${xx}:${yy}`;
+        const history = db.cells[key];
+        if (history && history.length > 0) {
+          const first = history[0];
+          if (first.lotW && first.lotH) {
+            requiredLotW = first.lotW;
+            requiredLotH = first.lotH;
           }
         }
       }
+    }
 
-      if (requiredLotW !== null && requiredLotH !== null) {
-        if (w < requiredLotW || h < requiredLotH) {
-          return res.status(400).json({
-            error: `lot_minimum_${requiredLotW}x${requiredLotH}`,
-            requiredLotW,
-            requiredLotH
-          });
-        }
+    if (requiredLotW !== null && requiredLotH !== null) {
+      if (w < requiredLotW || h < requiredLotH) {
+        return {
+          ok: false,
+          status: 400,
+          error: `lot_minimum_${requiredLotW}x${requiredLotH}`,
+          requiredLotW,
+          requiredLotH,
+        };
       }
+    }
 
-      for (let yy = y; yy < y + h; yy++) {
-        for (let xx = x; xx < x + w; xx++) {
-          const key = `${xx}:${yy}`;
-          const history = db.cells[key];
-          const priceCents = computeCellPriceCents(history);
+    // calcul du prix case par case
+    for (let yy = y; yy < y + h; yy++) {
+      for (let xx = x; xx < x + w; xx++) {
+        const key = `${xx}:${yy}`;
+        const history = db.cells[key];
+        const cellPrice = computeCellPriceCents(history);
 
-          totalCents += priceCents;
+        totalCents += cellPrice;
 
-          if (!history || history.length === 0) newCells++;
-          else overlappedCells++;
-        }
+        if (!history || history.length === 0) newCells++;
+        else overlappedCells++;
       }
+    }
 
-      return res.json({
-        ok: true,
-        x, y, w, h,
-        newCells,
-        overlappedCells,
-        totalCents,
-        currency: CURRENCY,
-        lotRule: (requiredLotW && requiredLotH)
+    return {
+      ok: true,
+      x,
+      y,
+      w,
+      h,
+      newCells,
+      overlappedCells,
+      totalCents,
+      currency: CURRENCY,
+      lotRule:
+        requiredLotW && requiredLotH
           ? `Ce bloc appartient à un lot initial de ${requiredLotW}x${requiredLotH}`
-          : null
-      });
+          : null,
+    };
+  }
 
+  // 👉 route HTTP qui utilise la fonction au-dessus
+  app.post('/api/purchase-rect/quote', (req, res) => {
+    try {
+      const out = calcRectQuote(req.body || {});
+      if (!out.ok) {
+        return res.status(out.status || 400).json(out);
+      }
+      return res.json(out);
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: 'quote_error' });
     }
   });
 
-  // fulfillment (appelé depuis le webhook)
+  // fulfillment après paiement
   function fulfillRectDirect({ x, y, w, h, buyerEmail }) {
     try {
       const db = readDB();
@@ -130,6 +150,7 @@ function attachRectRoutes(app, opts = {}) {
           const history = db.cells[key] || [];
           const nextPrice = computeCellPriceCents(history);
 
+          // reversement
           let payoutToPrevious = 0;
           if (history.length > 0) {
             const last = history[history.length - 1];
@@ -143,9 +164,10 @@ function attachRectRoutes(app, opts = {}) {
             paidPreviousCents: payoutToPrevious,
             at: new Date().toISOString(),
             lotW: w,
-            lotH: h
+            lotH: h,
           });
 
+          // on garde max N couches
           if (history.length > MAX_LAYERS_PER_CELL) {
             history.splice(0, history.length - MAX_LAYERS_PER_CELL);
           }
@@ -162,7 +184,9 @@ function attachRectRoutes(app, opts = {}) {
     }
   }
 
+  // on expose les 2 fonctions pour server.js
   app.locals.fulfillRectDirect = fulfillRectDirect;
+  app.locals.calcRectQuote = calcRectQuote;
 }
 
 module.exports = { attachRectRoutes };
