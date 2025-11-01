@@ -5,7 +5,7 @@ const path = require('path');
 function attachRectRoutes(app, opts = {}) {
   const dbPath = opts.dbPath || path.join(__dirname, 'data', 'db.json');
 
-  // config
+  // valeurs config (overridables par Render)
   const GRID_W = parseInt(process.env.GRID_W || '100', 10);
   const GRID_H = parseInt(process.env.GRID_H || '100', 10);
   const BASE_CELL_CENTS = parseInt(process.env.BASE_CELL_CENTS || '10000', 10); // 100 € = 10000
@@ -14,13 +14,17 @@ function attachRectRoutes(app, opts = {}) {
   const CURRENCY = process.env.CURRENCY || 'eur';
   const MAX_LAYERS_PER_CELL = parseInt(process.env.MAX_LAYERS_PER_CELL || '2', 10);
 
-  // dossier data
+  // être sûr que le dossier existe (Render peut démarrer vide)
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
   function readDB() {
     try {
       const raw = fs.readFileSync(dbPath, 'utf8');
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      // fallback si jamais parsed.cells n’existe pas
+      return {
+        cells: parsed.cells || {}
+      };
     } catch (e) {
       return { cells: {} };
     }
@@ -28,10 +32,14 @@ function attachRectRoutes(app, opts = {}) {
 
   function writeDB(db) {
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-    fs.writeFileSync(dbPath, JSON.stringify(db, null, 2), 'utf8');
+    // on garantit qu’il y a bien un objet cells
+    const toWrite = {
+      cells: db.cells || {}
+    };
+    fs.writeFileSync(dbPath, JSON.stringify(toWrite, null, 2), 'utf8');
   }
 
-  // prix d’UNE case
+  // prix d’une case selon historique
   function computeCellPriceCents(history) {
     if (!history || history.length === 0) {
       return BASE_CELL_CENTS;
@@ -40,9 +48,9 @@ function attachRectRoutes(app, opts = {}) {
     return Math.round(last.priceCents * PRICE_MULTIPLIER);
   }
 
-  // ------------------------------------------
+  // -------------------------------------------------------
   // 1) DEVIS
-  // ------------------------------------------
+  // -------------------------------------------------------
   app.post('/api/purchase-rect/quote', (req, res) => {
     try {
       const { x, y, w, h, buyerEmail } = req.body || {};
@@ -66,7 +74,7 @@ function attachRectRoutes(app, opts = {}) {
       let newCells = 0;
       let overlappedCells = 0;
 
-      // règle “le tout premier achat impose la taille du lot”
+      // règle “premier achat = taille du lot”
       let requiredLotW = null;
       let requiredLotH = null;
 
@@ -94,7 +102,7 @@ function attachRectRoutes(app, opts = {}) {
         }
       }
 
-      // calcul du prix
+      // calcul de prix
       for (let yy = y; yy < y + h; yy++) {
         for (let xx = x; xx < x + w; xx++) {
           const key = `${xx}:${yy}`;
@@ -125,9 +133,9 @@ function attachRectRoutes(app, opts = {}) {
     }
   });
 
-  // ------------------------------------------
-  // 2) FULFILL (appelé par le webhook stripe OU direct)
-  // ------------------------------------------
+  // -------------------------------------------------------
+  // 2) FULFILL après paiement
+  // -------------------------------------------------------
   function fulfillRectDirect({ x, y, w, h, buyerEmail }) {
     try {
       const db = readDB();
@@ -170,7 +178,6 @@ function attachRectRoutes(app, opts = {}) {
     }
   }
 
-  // exposé pour server.js
   app.locals.fulfillRectDirect = fulfillRectDirect;
 }
 
