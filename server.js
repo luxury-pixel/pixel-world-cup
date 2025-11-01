@@ -140,11 +140,8 @@ app.post('/api/purchase-rect/checkout', async (req, res) => {
 });
 
 // 6) lancement
-app.listen(PORT, () => {
-  console.log(`✅ Serveur prêt sur [http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Serveur prêt sur Render - Port ${PORT}`);
 });
 
-// 7) start
-app.listen(PORT, () => {
-  console.log(`✅ Serveur prêt sur [http://localhost:${PORT}`);
-});
+
