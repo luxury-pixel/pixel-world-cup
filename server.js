@@ -10,7 +10,7 @@ dotenv.config();
 const app  = express();
 const PORT = process.env.PORT || 4242;
 
-// 1) Webhook Stripe (RAW avant json)
+// 1) Webhook Stripe AVANT json
 app.post(
   '/webhook/stripe',
   express.raw({ type: 'application/json' }),
@@ -50,7 +50,7 @@ app.post(
   }
 );
 
-// 2) middlewares
+// 2) middlewares normaux
 app.use(
   cors({
     origin: [
@@ -66,11 +66,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
 // 3) pages
-app.get('/',        (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.get('/buy',     (req, res) => res.sendFile(path.join(__dirname, 'buy.html')));
-app.get('/about',   (req, res) => res.sendFile(path.join(__dirname, 'about.html')));
-app.get('/cancel',  (req, res) => res.sendFile(path.join(__dirname, 'cancel.html')));
-app.get('/success', (req, res) => {
+app.get('/',       (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/buy',    (req, res) => res.sendFile(path.join(__dirname, 'buy.html')));
+app.get('/about',  (req, res) => res.sendFile(path.join(__dirname, 'about.html')));
+app.get('/cancel', (req, res) => res.sendFile(path.join(__dirname, 'cancel.html')));
+app.get('/success',(req, res) => {
   try {
     res.sendFile(path.join(__dirname, 'success.html'));
   } catch {
@@ -78,12 +78,12 @@ app.get('/success', (req, res) => {
   }
 });
 
-// 4) routes rectangles
+// 4) routes rectangles (met calcRectQuote + fulfillRectDirect dans app.locals)
 attachRectRoutes(app, {
   dbPath: path.join(__dirname, 'data', 'db.json'),
 });
 
-// 5) checkout Stripe → utilise la fonction locale
+// 5) checkout Stripe (utilise calcRectQuote exposée)
 app.post('/api/purchase-rect/checkout', async (req, res) => {
   try {
     const { x, y, w, h, buyerEmail } = req.body || {};
