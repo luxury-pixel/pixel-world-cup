@@ -326,14 +326,13 @@
         }
         const x=minX, y=minY, w=maxX-minX+1, h=maxY-minY+1;
 
-        // 1) Devis
-        const q = await postJSON(`${API_BASE}/api/purchase-rect/quote`, { x,y,w,h,buyerEmail });
-        if(!q.ok){
-          console.error(q.data);
-          alert(q.data?.error || 'Devis refusé');
-          return;
-        }
-
+        // 1) Demander le devis (quote)
+        const quote = await postJSON(`${API_BASE}/api/purchase-rect/quote`, body);
+if (!quote.ok) {
+  console.error(quote.data);
+  alert('Erreur devis (quote_error)');
+  return;
+}
         // 2) Créer la session Stripe
         const r = await postJSON(`${API_BASE}/api/purchase-rect/checkout`, { x,y,w,h,buyerEmail });
         if(!r.ok || !r.data?.ok){

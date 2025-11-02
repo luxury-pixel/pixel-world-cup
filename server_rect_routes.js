@@ -5,7 +5,11 @@ const path = require('path');
 function attachRectRoutes(app, opts = {}) {
   const dbPath = opts.dbPath || path.join(__dirname, 'data', 'db.json');
 
+<<<<<<< HEAD
   // valeurs config (overridables par Render)
+=======
+  // config
+>>>>>>> ee152e7 (fix: add real quote route)
   const GRID_W = parseInt(process.env.GRID_W || '100', 10);
   const GRID_H = parseInt(process.env.GRID_H || '100', 10);
   const BASE_CELL_CENTS = parseInt(process.env.BASE_CELL_CENTS || '10000', 10); // 100 € = 10000
@@ -14,17 +18,25 @@ function attachRectRoutes(app, opts = {}) {
   const CURRENCY = process.env.CURRENCY || 'eur';
   const MAX_LAYERS_PER_CELL = parseInt(process.env.MAX_LAYERS_PER_CELL || '2', 10);
 
+<<<<<<< HEAD
   // être sûr que le dossier existe (Render peut démarrer vide)
+=======
+  // dossier data
+>>>>>>> ee152e7 (fix: add real quote route)
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
   function readDB() {
     try {
       const raw = fs.readFileSync(dbPath, 'utf8');
+<<<<<<< HEAD
       const parsed = JSON.parse(raw);
       // fallback si jamais parsed.cells n’existe pas
       return {
         cells: parsed.cells || {}
       };
+=======
+      return JSON.parse(raw);
+>>>>>>> ee152e7 (fix: add real quote route)
     } catch (e) {
       return { cells: {} };
     }
@@ -39,7 +51,11 @@ function attachRectRoutes(app, opts = {}) {
     fs.writeFileSync(dbPath, JSON.stringify(toWrite, null, 2), 'utf8');
   }
 
+<<<<<<< HEAD
   // prix d’une case selon historique
+=======
+  // prix d’UNE case
+>>>>>>> ee152e7 (fix: add real quote route)
   function computeCellPriceCents(history) {
     if (!history || history.length === 0) {
       return BASE_CELL_CENTS;
@@ -48,9 +64,15 @@ function attachRectRoutes(app, opts = {}) {
     return Math.round(last.priceCents * PRICE_MULTIPLIER);
   }
 
+<<<<<<< HEAD
   // -------------------------------------------------------
   // 1) DEVIS
   // -------------------------------------------------------
+=======
+  // ------------------------------------------
+  // 1) DEVIS
+  // ------------------------------------------
+>>>>>>> ee152e7 (fix: add real quote route)
   app.post('/api/purchase-rect/quote', (req, res) => {
     try {
       const { x, y, w, h, buyerEmail } = req.body || {};
@@ -74,7 +96,11 @@ function attachRectRoutes(app, opts = {}) {
       let newCells = 0;
       let overlappedCells = 0;
 
+<<<<<<< HEAD
       // règle “premier achat = taille du lot”
+=======
+      // règle “le tout premier achat impose la taille du lot”
+>>>>>>> ee152e7 (fix: add real quote route)
       let requiredLotW = null;
       let requiredLotH = null;
 
@@ -102,7 +128,11 @@ function attachRectRoutes(app, opts = {}) {
         }
       }
 
+<<<<<<< HEAD
       // calcul de prix
+=======
+      // calcul du prix
+>>>>>>> ee152e7 (fix: add real quote route)
       for (let yy = y; yy < y + h; yy++) {
         for (let xx = x; xx < x + w; xx++) {
           const key = `${xx}:${yy}`;
@@ -133,9 +163,15 @@ function attachRectRoutes(app, opts = {}) {
     }
   });
 
+<<<<<<< HEAD
   // -------------------------------------------------------
   // 2) FULFILL après paiement
   // -------------------------------------------------------
+=======
+  // ------------------------------------------
+  // 2) FULFILL (appelé par le webhook stripe OU direct)
+  // ------------------------------------------
+>>>>>>> ee152e7 (fix: add real quote route)
   function fulfillRectDirect({ x, y, w, h, buyerEmail }) {
     try {
       const db = readDB();
@@ -178,6 +214,7 @@ function attachRectRoutes(app, opts = {}) {
     }
   }
 
+  // exposé pour server.js
   app.locals.fulfillRectDirect = fulfillRectDirect;
 }
 

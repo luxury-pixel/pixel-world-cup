@@ -1,13 +1,13 @@
 // server.js
 const express = require('express');
-const dotenv = require('dotenv');
-const path = require('path');
-const cors = require('cors');
+const dotenv  = require('dotenv');
+const path    = require('path');
+const cors    = require('cors');
 const { attachRectRoutes } = require('./server_rect_routes.js');
 
 dotenv.config();
 
-const app = express();
+const app  = express();
 const PORT = process.env.PORT || 4242;
 
 // 1) Webhook Stripe (RAW avant json)
@@ -18,8 +18,8 @@ app.post(
     try {
       const Stripe = require('stripe');
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-      const sig = req.headers['stripe-signature'];
-      const event = stripe.webhooks.constructEvent(
+      const sig    = req.headers['stripe-signature'];
+      const event  = stripe.webhooks.constructEvent(
         req.body,
         sig,
         process.env.STRIPE_WEBHOOK_SECRET
@@ -66,10 +66,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
 // 3) pages
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.get('/buy', (req, res) => res.sendFile(path.join(__dirname, 'buy.html')));
-app.get('/about', (req, res) => res.sendFile(path.join(__dirname, 'about.html')));
-app.get('/cancel', (req, res) => res.sendFile(path.join(__dirname, 'cancel.html')));
+app.get('/',        (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/buy',     (req, res) => res.sendFile(path.join(__dirname, 'buy.html')));
+app.get('/about',   (req, res) => res.sendFile(path.join(__dirname, 'about.html')));
+app.get('/cancel',  (req, res) => res.sendFile(path.join(__dirname, 'cancel.html')));
 app.get('/success', (req, res) => {
   try {
     res.sendFile(path.join(__dirname, 'success.html'));
@@ -78,12 +78,12 @@ app.get('/success', (req, res) => {
   }
 });
 
-// 4) routes rectangles (ça initialise app.locals.calcRectQuote + fulfill)
+// 4) routes rectangles
 attachRectRoutes(app, {
   dbPath: path.join(__dirname, 'data', 'db.json'),
 });
 
-// 5) checkout Stripe → utilise la fonction locale, PAS fetch()
+// 5) checkout Stripe → utilise la fonction locale
 app.post('/api/purchase-rect/checkout', async (req, res) => {
   try {
     const { x, y, w, h, buyerEmail } = req.body || {};
@@ -91,10 +91,10 @@ app.post('/api/purchase-rect/checkout', async (req, res) => {
       return res.status(400).json({ error: 'buyerEmail requis' });
     }
 
-    // ✅ on utilise la fonction exposée par server_rect_routes.js
     if (typeof app.locals.calcRectQuote !== 'function') {
       return res.status(500).json({ error: 'quote_function_missing' });
     }
+
     const quote = app.locals.calcRectQuote({ x, y, w, h, buyerEmail });
     if (!quote.ok) {
       return res.status(400).json(quote);
@@ -108,7 +108,7 @@ app.post('/api/purchase-rect/checkout', async (req, res) => {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       success_url: `${BASE}/success.html`,
-      cancel_url: `${BASE}/cancel.html`,
+      cancel_url:  `${BASE}/cancel.html`,
       customer_email: buyerEmail,
       line_items: [
         {
@@ -143,5 +143,3 @@ app.post('/api/purchase-rect/checkout', async (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Serveur prêt sur Render - Port ${PORT}`);
 });
-
-
