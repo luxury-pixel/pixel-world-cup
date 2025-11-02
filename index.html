@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pixel World Cup — 10 000 cases</title>
   <style>
-    :root{ --cell:14px; --gap:1px; }
-    html,body{ height:100% }
+    :root { --cell:14px; --gap:1px; }
+    html,body{height:100%}
     body{
       margin:0; color:#fff; font-family:Inter,system-ui,Arial,sans-serif;
       background:
@@ -15,8 +15,7 @@
         #0b0c15;
       display:flex; flex-direction:column;
     }
-    a{color:#7bd3ff; text-decoration:none} a:hover{text-decoration:underline}
-
+    a{color:#7bd3ff;text-decoration:none}a:hover{text-decoration:underline}
     header{padding:18px 20px;background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border-bottom:1px solid rgba(255,255,255,.08);}
     .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
     .brand{display:flex;align-items:center;gap:12px;}
@@ -26,13 +25,10 @@
     .stats{display:flex;gap:10px;flex-wrap:wrap}
     .pill{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);padding:6px 10px;border-radius:999px;font-size:13px;color:#dbe6ff;}
     .countdown{color:#ffe08a;font-weight:700}
-
     .toolbar{display:flex;gap:10px;align-items:center;padding:12px 0 4px;flex-wrap:wrap;}
     .btn{background:#171a2b;border:1px solid #2b2f4f;color:#eaf1ff;padding:9px 12px;border-radius:10px;font-size:14px;cursor:pointer;}
     .btn.primary{background:linear-gradient(180deg,#6fd1ff,#3a86ff);color:#061026;border-color:#2b6ad7;font-weight:700;box-shadow:0 8px 24px rgba(58,134,255,.35);}
     .btn:disabled{opacity:.45;cursor:not-allowed}
-    .range{accent-color:#79f}
-
     #stage{flex:1;padding:18px;}
     #gridWrap{
       margin:auto;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:14px;
@@ -45,19 +41,16 @@
       background:#151934;
       width:calc(100*var(--cell) + 99*var(--gap));
       height:calc(100*var(--cell) + 99*var(--gap));
-      position:relative; z-index:1;
+      position:relative;z-index:1;
     }
     .cell{width:var(--cell);height:var(--cell);background:#2b2f55;border:1px solid #3b3f68;box-sizing:border-box;cursor:pointer;transition:background .12s;}
     .cell:hover{background:#3b3f68}
     .sel{outline:1px solid #bcd1ff;}
-
     #selectionBox{
       position:absolute;pointer-events:none;border:2px dashed #7fb3ff;
       background:rgba(127,179,255,.15);display:none;z-index:5;
     }
-
     footer{padding:14px 18px;border-top:1px solid rgba(255,255,255,.08);text-align:center;color:#bcd1ff;background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);}
-
     .modalWrap{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:10}
     .modal{width:min(560px,92vw);background:#0f1224;border:1px solid #2a2e52;border-radius:14px;padding:16px 16px 10px;box-shadow:0 30px 100px rgba(0,0,0,.6);}
     .modal h3{margin:0 0 10px}
@@ -85,7 +78,7 @@
     <div class="toolbar">
       <button id="buyBtn" class="btn primary" disabled>Acheter mes cases</button>
       <button id="clearSelBtn" class="btn">Désélectionner</button>
-      <label>Zoom <input id="zoom" class="range" type="range" min="10" max="24" step="1" value="14"/></label>
+      <label>Zoom <input id="zoom" type="range" min="10" max="24" step="1" value="14" /></label>
     </div>
   </header>
 
@@ -96,18 +89,17 @@
     </div>
   </div>
 
-  <footer>©️ 2025 Pixel World Cup — Démo locale.</footer>
+  <footer>©️ 2025 Pixel World Cup — Démo.</footer>
 
-  <!-- Modal -->
+  <!-- MODAL -->
   <div id="modalWrap" class="modalWrap">
     <div class="modal">
       <h3>Finaliser l’achat</h3>
-      <div class="row"><label>Votre nom</label><input id="mName" placeholder="Nom affiché publiquement"/></div>
-      <div class="row"><label>Email</label><input id="mEmail" type="email" placeholder="ton.email@example.com"/></div>
-      <!-- ✅ URL corrigé -->
-      <div class="row"><label>URL</label><input id="mLink" placeholder="[https://"/></div]https://"/></div>
-      <div class="row"><label>Couleur</label><input id="mColor" type="color" value="#1e90ff"/></div>
-      <div class="row"><label>Logo</label><input id="mLogo" placeholder="https://…/logo.png"/></div>
+      <div class="row"><label>Votre nom</label><input id="mName" placeholder="Nom affiché publiquement" /></div>
+      <div class="row"><label>Email</label><input id="mEmail" type="email" placeholder="ton.email@example.com" /></div>
+      <div class="row"><label>URL</label><input id="mLink" placeholder="https://ton-site.com" /></div>
+      <div class="row"><label>Couleur</label><input id="mColor" type="color" value="#1e90ff" /></div>
+      <div class="row"><label>Logo</label><input id="mLogo" placeholder="https://…/logo.png" /></div>
       <div class="row"><label>Message</label><textarea id="mMsg" rows="2"></textarea></div>
       <div class="muted">
         Cases sélectionnées : <b id="selCount">0</b> — Total indicatif : <span class="priceTag" id="totalPrice">0 €</span>
@@ -122,234 +114,274 @@
   <div id="errors"></div>
 
   <script>
-  (function(){
-    const box = document.getElementById('errors');
-    window.addEventListener('error', (e)=>{
-      box.style.display='block'; box.textContent = 'Erreur : ' + (e.error?.message || e.message || e.filename);
-    });
-    window.addEventListener('unhandledrejection', (e)=>{
-      box.style.display='block'; box.textContent = 'Promise rejetée : ' + (e.reason?.message || e.reason || '');
-    });
-  })();
-
-  document.addEventListener("DOMContentLoaded", () => {
-    const UI_CELL_PRICE_EUR = 100;   // 💰 100 € la case (affichage)
-    const COLS = 100, ROWS = 100, TOTAL = COLS * ROWS;
-    const DEADLINE = new Date('2025-12-31T23:59:59+01:00');
-
-    const grid = document.getElementById('grid'),
-          gridWrap = document.getElementById('gridWrap'),
-          box = document.getElementById('selectionBox'),
-          buyBtn = document.getElementById('buyBtn'),
-          clearBtn = document.getElementById('clearSelBtn'),
-          soldEl = document.getElementById('soldCount'),
-          freeEl = document.getElementById('freeCount'),
-          countdownEl = document.getElementById('countdown'),
-          modalWrap = document.getElementById('modalWrap'),
-          mEmail = document.getElementById('mEmail'),
-          selCountEl = document.getElementById('selCount'),
-          totalPriceEl = document.getElementById('totalPrice');
-
-    const selection = new Set();
-    const cells = {};
-
-    const fmtEUR = c => (Number(c||0)).toLocaleString('fr-FR',{style:'currency',currency:'EUR'});
-    const step = () => {
-      const cell = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell'))||14;
-      const gap  = parseInt(getComputedStyle(grid).gap)||1;
-      return cell + gap;
-    };
-    const idAtClientPoint = (clientX, clientY) => {
-      const rect = grid.getBoundingClientRect();
-      const s = step();
-      const x = Math.floor((clientX - rect.left) / s);
-      const y = Math.floor((clientY - rect.top)  / s);
-      if (x<0 || y<0 || x>=COLS || y>=ROWS) return null;
-      return `${x}:${y}`;
-    };
-
-    (function buildGrid(){
-      const frag = document.createDocumentFragment();
-      for(let y=0;y<ROWS;y++){
-        for(let x=0;x<COLS;x++){
-          const d=document.createElement('div');
-          d.className='cell';
-          d.dataset.x=x; d.dataset.y=y;
-          frag.appendChild(d);
-        }
-      }
-      grid.appendChild(frag);
+    // petit bloc erreurs
+    (function () {
+      const box = document.getElementById('errors');
+      window.addEventListener('error', (e) => {
+        box.style.display = 'block';
+        box.textContent = 'Erreur : ' + (e.error?.message || e.message || e.filename);
+      });
+      window.addEventListener('unhandledrejection', (e) => {
+        box.style.display = 'block';
+        box.textContent = 'Promise rejetée : ' + (e.reason?.message || e.reason || '');
+      });
     })();
 
-    grid.addEventListener('click', (e)=>{
-      const cell = e.target.closest('.cell');
-      if(!cell) return;
-      const id = `${cell.dataset.x}:${cell.dataset.y}`;
+    document.addEventListener('DOMContentLoaded', () => {
+      const UI_CELL_PRICE_EUR = 100;
+      const COLS = 100, ROWS = 100, TOTAL = COLS * ROWS;
+      const DEADLINE = new Date('2025-12-31T23:59:59+01:00');
 
-      if (e.altKey) {
-        selection.clear();
-        grid.querySelectorAll('.cell.sel').forEach(n=>n.classList.remove('sel'));
-      }
+      const grid = document.getElementById('grid');
+      const gridWrap = document.getElementById('gridWrap');
+      const box = document.getElementById('selectionBox');
+      const buyBtn = document.getElementById('buyBtn');
+      const clearBtn = document.getElementById('clearSelBtn');
+      const soldEl = document.getElementById('soldCount');
+      const freeEl = document.getElementById('freeCount');
+      const countdownEl = document.getElementById('countdown');
+      const modalWrap = document.getElementById('modalWrap');
+      const mEmail = document.getElementById('mEmail');
+      const mName = document.getElementById('mName');
+      const mLink = document.getElementById('mLink');
+      const mColor = document.getElementById('mColor');
+      const mLogo = document.getElementById('mLogo');
+      const mMsg = document.getElementById('mMsg');
+      const selCountEl = document.getElementById('selCount');
+      const totalPriceEl = document.getElementById('totalPrice');
 
-      if (selection.has(id)) {
-        selection.delete(id);
-        cell.classList.remove('sel');
-      } else {
-        selection.add(id);
-        cell.classList.add('sel');
-      }
-      updateUI();
-    });
+      const selection = new Set();
+      const cells = {};
 
-    let dragging = false, startId = null;
-    gridWrap.addEventListener('mousedown',(e)=>{
-      const id = idAtClientPoint(e.clientX, e.clientY);
-      if (!id) return;
-      dragging = true; startId = id;
+      const API_BASE = window.location.origin;
 
-      if (e.altKey) {
-        selection.clear();
-        grid.querySelectorAll('.cell.sel').forEach(n=>n.classList.remove('sel'));
-      }
+      const fmtEUR = (c) => Number(c || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+      const step = () => {
+        const cell = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell')) || 14;
+        const gap = parseInt(getComputedStyle(grid).gap) || 1;
+        return cell + gap;
+      };
+      const idAtClientPoint = (clientX, clientY) => {
+        const rect = grid.getBoundingClientRect();
+        const s = step();
+        const x = Math.floor((clientX - rect.left) / s);
+        const y = Math.floor((clientY - rect.top) / s);
+        if (x < 0 || y < 0 || x >= COLS || y >= ROWS) return null;
+        return `${x}:${y}`;
+      };
 
-      const s = step();
-      const [sx, sy] = startId.split(':').map(Number);
-      box.style.display='block';
-      box.style.left  = (sx * s) + 'px';
-      box.style.top   = (sy * s) + 'px';
-      box.style.width = s + 'px';
-      box.style.height= s + 'px';
-      e.preventDefault();
-    });
-
-    window.addEventListener('mousemove',(e)=>{
-      if(!dragging) return;
-      const curId = idAtClientPoint(e.clientX, e.clientY);
-      if(!curId) return;
-
-      const s = step();
-      const [sx, sy] = startId.split(':').map(Number);
-      const [cx, cy] = curId.split(':').map(Number);
-      const x1 = Math.min(sx, cx), x2 = Math.max(sx, cx);
-      const y1 = Math.min(sy, cy), y2 = Math.max(sy, cy);
-
-      box.style.display='block';
-      box.style.left   = (x1 * s) + 'px';
-      box.style.top    = (y1 * s) + 'px';
-      box.style.width  = ((x2 - x1 + 1) * s - (parseInt(getComputedStyle(grid).gap)||1)) + 'px';
-      box.style.height = ((y2 - y1 + 1) * s - (parseInt(getComputedStyle(grid).gap)||1)) + 'px';
-
-      for(let y=y1;y<=y2;y++){
-        for(let x=x1;x<=x2;x++){
-          const id = `${x}:${y}`;
-          if(!selection.has(id)){
-            selection.add(id);
-            const node = grid.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
-            if (node) node.classList.add('sel');
+      // construire la grille
+      (function buildGrid() {
+        const frag = document.createDocumentFragment();
+        for (let y = 0; y < ROWS; y++) {
+          for (let x = 0; x < COLS; x++) {
+            const d = document.createElement('div');
+            d.className = 'cell';
+            d.dataset.x = x;
+            d.dataset.y = y;
+            frag.appendChild(d);
           }
         }
+        grid.appendChild(frag);
+      })();
+
+      grid.addEventListener('click', (e) => {
+        const cell = e.target.closest('.cell');
+        if (!cell) return;
+        const id = `${cell.dataset.x}:${cell.dataset.y}`;
+
+        if (e.altKey) {
+          selection.clear();
+          grid.querySelectorAll('.cell.sel').forEach((n) => n.classList.remove('sel'));
+        }
+
+        if (selection.has(id)) {
+          selection.delete(id);
+          cell.classList.remove('sel');
+        } else {
+          selection.add(id);
+          cell.classList.add('sel');
+        }
+        updateUI();
+      });
+
+      let dragging = false, startId = null;
+      gridWrap.addEventListener('mousedown', (e) => {
+        const id = idAtClientPoint(e.clientX, e.clientY);
+        if (!id) return;
+        dragging = true;
+        startId = id;
+
+        if (e.altKey) {
+          selection.clear();
+          grid.querySelectorAll('.cell.sel').forEach((n) => n.classList.remove('sel'));
+        }
+
+        const s = step();
+        const [sx, sy] = startId.split(':').map(Number);
+        box.style.display = 'block';
+        box.style.left = sx * s + 'px';
+        box.style.top = sy * s + 'px';
+        box.style.width = s + 'px';
+        box.style.height = s + 'px';
+        e.preventDefault();
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        const curId = idAtClientPoint(e.clientX, e.clientY);
+        if (!curId) return;
+
+        const s = step();
+        const [sx, sy] = startId.split(':').map(Number);
+        const [cx, cy] = curId.split(':').map(Number);
+        const x1 = Math.min(sx, cx), x2 = Math.max(sx, cx);
+        const y1 = Math.min(sy, cy), y2 = Math.max(sy, cy);
+
+        box.style.display = 'block';
+        box.style.left = x1 * s + 'px';
+        box.style.top = y1 * s + 'px';
+        box.style.width = ((x2 - x1 + 1) * s - (parseInt(getComputedStyle(grid).gap) || 1)) + 'px';
+        box.style.height = ((y2 - y1 + 1) * s - (parseInt(getComputedStyle(grid).gap) || 1)) + 'px';
+
+        for (let y = y1; y <= y2; y++) {
+          for (let x = x1; x <= x2; x++) {
+            const id = `${x}:${y}`;
+            if (!selection.has(id)) {
+              selection.add(id);
+              const node = grid.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+              if (node) node.classList.add('sel');
+            }
+          }
+        }
+        updateUI();
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        startId = null;
+        box.style.display = 'none';
+      });
+
+      function updateUI() {
+        const sold = Object.keys(cells).length;
+        soldEl.textContent = sold.toLocaleString('fr-FR');
+        freeEl.textContent = (TOTAL - sold).toLocaleString('fr-FR');
+
+        const qty = selection.size;
+        selCountEl.textContent = qty;
+        totalPriceEl.textContent = fmtEUR(qty * UI_CELL_PRICE_EUR);
+        buyBtn.disabled = qty === 0 || new Date() >= DEADLINE;
       }
       updateUI();
-    });
 
-    window.addEventListener('mouseup',()=>{
-      if(!dragging) return;
-      dragging=false; startId=null;
-      box.style.display='none';
-    });
-
-    function updateUI(){
-      const sold = Object.keys(cells).length;
-      soldEl.textContent = sold.toLocaleString('fr-FR');
-      freeEl.textContent = (TOTAL - sold).toLocaleString('fr-FR');
-
-      const qty = selection.size;
-      selCountEl.textContent = qty;
-      totalPriceEl.textContent = fmtEUR(qty * UI_CELL_PRICE_EUR);
-      buyBtn.disabled = qty === 0 || new Date() >= DEADLINE;
-    }
-    updateUI();
-
-    buyBtn.addEventListener('click', ()=>{
-      if(selection.size===0) return;
-      if(new Date()>=DEADLINE){ alert('Compétition terminée.'); return; }
-      modalWrap.style.display='flex';
-    });
-    document.getElementById('cancelBuy').addEventListener('click', ()=> modalWrap.style.display='none');
-
-    (function tick(){
-      const ms = DEADLINE - new Date();
-      if(ms<=0){ countdownEl.textContent='Terminé'; buyBtn.disabled=true; return; }
-      const s=Math.floor(ms/1000), d=Math.floor(s/86400), h=Math.floor((s%86400)/3600), m=Math.floor((s%3600)/60), sec=s%60;
-      countdownEl.textContent = `${d}j ${h}h ${m}m ${sec}s`;
-      setTimeout(tick, 1000);
-    })();
-
-    clearBtn.addEventListener('click', ()=>{
-      selection.clear();
-      grid.querySelectorAll('.cell.sel').forEach(n=>n.classList.remove('sel'));
-      updateUI();
-    });
-
-    // 🔁 ici : on utilise toujours le même domaine que la page
-    const API_BASE = window.location.origin;
-
-    async function postJSON(url, body){
-      const r = await fetch(url, {
-        method:'POST',
-        headers:{'content-type':'application/json'},
-        body:JSON.stringify(body)
-      });
-      const data = await r.json().catch(()=> ({}));
-      return { ok:r.ok, data };
-    }
-
-    (function attachConfirmHandler(){
-      const btn = document.getElementById('confirmStripe');
-      if (!btn){ console.error('⚠️ #confirmStripe introuvable'); return; }
-      btn.addEventListener('click', onConfirmStripe);
-      console.log('✅ Handler confirmStripe attaché.');
-    })();
-
-    async function onConfirmStripe(){
-      try{
-        if(selection.size===0){ alert('Sélectionne des cases.'); return; }
-        const buyerEmail = (mEmail.value||'').trim();
-        if(!buyerEmail){ alert('Mets ton email.'); return; }
-
-        // on transforme en 1 rectangle
-        let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
-        for(const id of selection){
-          const [x,y]=id.split(':').map(Number);
-          minX=Math.min(minX,x); minY=Math.min(minY,y);
-          maxX=Math.max(maxX,x); maxY=Math.max(maxY,y);
-        }
-        const x=minX, y=minY, w=maxX-minX+1, h=maxY-minY+1;
-
-        // 1) Demander le devis (quote)
-        const quote = await postJSON(`${API_BASE}/api/purchase-rect/quote`, body);
-if (!quote.ok) {
-  console.error(quote.data);
-  alert('Erreur devis (quote_error)');
-  return;
-}
-        // 2) Créer la session Stripe
-        const r = await postJSON(`${API_BASE}/api/purchase-rect/checkout`, { x,y,w,h,buyerEmail });
-        if(!r.ok || !r.data?.ok){
-          console.error(r.data);
-          alert(r.data?.error || 'Erreur paiement');
+      buyBtn.addEventListener('click', () => {
+        if (selection.size === 0) return;
+        if (new Date() >= DEADLINE) {
+          alert('Compétition terminée.');
           return;
         }
+        modalWrap.style.display = 'flex';
+      });
+      document.getElementById('cancelBuy').addEventListener('click', () => {
+        modalWrap.style.display = 'none';
+      });
 
-        // 3) redirection
-        window.location.href = r.data.url;
-      } catch(e){
-        console.error(e);
-        alert('Erreur : ' + (e.message||e));
+      // compte à rebours
+      (function tick() {
+        const ms = DEADLINE - new Date();
+        if (ms <= 0) {
+          countdownEl.textContent = 'Terminé';
+          buyBtn.disabled = true;
+          return;
+        }
+        const s = Math.floor(ms / 1000),
+          d = Math.floor(s / 86400),
+          h = Math.floor((s % 86400) / 3600),
+          m = Math.floor((s % 3600) / 60),
+          sec = s % 60;
+        countdownEl.textContent = `${d}j ${h}h ${m}m ${sec}s`;
+        setTimeout(tick, 1000);
+      })();
+
+      clearBtn.addEventListener('click', () => {
+        selection.clear();
+        grid.querySelectorAll('.cell.sel').forEach((n) => n.classList.remove('sel'));
+        updateUI();
+      });
+
+      async function postJSON(url, body) {
+        const r = await fetch(url, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await r.json().catch(() => ({}));
+        return { ok: r.ok, data };
       }
-    }
 
-  });
+      // bouton "Confirmer & Payer"
+      document.getElementById('confirmStripe').addEventListener('click', onConfirmStripe);
+
+      async function onConfirmStripe() {
+        try {
+          if (selection.size === 0) {
+            alert('Sélectionne des cases.');
+            return;
+          }
+          const buyerEmail = (mEmail.value || '').trim();
+          if (!buyerEmail) {
+            alert('Mets ton email.');
+            return;
+          }
+
+          // on réduit en 1 rectangle
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+          for (const id of selection) {
+            const [x, y] = id.split(':').map(Number);
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+          }
+          const x = minX, y = minY, w = maxX - minX + 1, h = maxY - minY + 1;
+
+          // on envoie aussi le "contenu" (nom, url...)
+          const body = {
+            x, y, w, h,
+            buyerEmail,
+            name: mName.value || '',
+            link: mLink.value || '',
+            color: mColor.value || '',
+            logo: mLogo.value || '',
+            message: mMsg.value || ''
+          };
+
+          // 1) devis
+          const quote = await postJSON(`${API_BASE}/api/purchase-rect/quote`, body);
+          if (!quote.ok) {
+            console.error(quote.data);
+            alert(quote.data?.error || 'Erreur devis (quote_error)');
+            return;
+          }
+
+          // 2) session Stripe
+          const r = await postJSON(`${API_BASE}/api/purchase-rect/checkout`, body);
+          if (!r.ok || !r.data?.ok) {
+            console.error(r.data);
+            alert(r.data?.error || 'Erreur paiement');
+            return;
+          }
+
+          // 3) redirection
+          window.location.href = r.data.url;
+        } catch (e) {
+          console.error(e);
+          alert('Erreur : ' + (e.message || e));
+        }
+      }
+    });
   </script>
 </body>
 </html>
