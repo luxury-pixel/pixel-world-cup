@@ -10,7 +10,7 @@ dotenv.config();
 const app  = express();
 const PORT = process.env.PORT || 4242;
 
-// 1) Webhook Stripe AVANT json
+// 1) Webhook Stripe (RAW avant json)
 app.post(
   '/webhook/stripe',
   express.raw({ type: 'application/json' }),
@@ -34,11 +34,13 @@ app.post(
             w: Number(session.metadata.w),
             h: Number(session.metadata.h),
             buyerEmail: session.metadata.buyerEmail,
+            // visuels
+            logo: session.metadata.logo || null,
+            color: session.metadata.color || null,
+            message: session.metadata.message || null,
           };
           const out = app.locals.fulfillRectDirect(payload);
-          if (!out.ok) {
-            console.error('❌ Fulfill rect ERROR:', out.error);
-          }
+          if (!out.ok) console.error('❌ Fulfill rect ERROR:', out.error);
         }
       }
 
@@ -50,7 +52,7 @@ app.post(
   }
 );
 
-// 2) middlewares normaux
+// 2) middlewares
 app.use(
   cors({
     origin: [
@@ -66,39 +68,31 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
 // 3) pages
-app.get('/',       (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.get('/buy',    (req, res) => res.sendFile(path.join(__dirname, 'buy.html')));
-app.get('/about',  (req, res) => res.sendFile(path.join(__dirname, 'about.html')));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/buy', (req, res) => res.sendFile(path.join(__dirname, 'buy.html')));
+app.get('/about', (req, res) => res.sendFile(path.join(__dirname, 'about.html')));
 app.get('/cancel', (req, res) => res.sendFile(path.join(__dirname, 'cancel.html')));
-app.get('/success',(req, res) => {
-  try {
-    res.sendFile(path.join(__dirname, 'success.html'));
-  } catch {
-    res.sendFile(path.join(__dirname, 'succes.html'));
-  }
+app.get('/success', (req, res) => {
+  try { res.sendFile(path.join(__dirname, 'success.html')); }
+  catch { res.sendFile(path.join(__dirname, 'succes.html')); }
 });
 
-// 4) routes rectangles (met calcRectQuote + fulfillRectDirect dans app.locals)
+// 4) routes rectangles
 attachRectRoutes(app, {
   dbPath: path.join(__dirname, 'data', 'db.json'),
 });
 
-// 5) checkout Stripe (utilise calcRectQuote exposée)
+// 5) checkout Stripe (appelle calcRectQuote local + passe les visuels)
 app.post('/api/purchase-rect/checkout', async (req, res) => {
   try {
-    const { x, y, w, h, buyerEmail } = req.body || {};
-    if (!buyerEmail) {
-      return res.status(400).json({ error: 'buyerEmail requis' });
-    }
+    const { x, y, w, h, buyerEmail, logo, color, message } = req.body || {};
+    if (!buyerEmail) return res.status(400).json({ error: 'buyerEmail requis' });
 
     if (typeof app.locals.calcRectQuote !== 'function') {
       return res.status(500).json({ error: 'quote_function_missing' });
     }
-
     const quote = app.locals.calcRectQuote({ x, y, w, h, buyerEmail });
-    if (!quote.ok) {
-      return res.status(400).json(quote);
-    }
+    if (!quote.ok) return res.status(400).json(quote);
 
     const Stripe = require('stripe');
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -114,9 +108,7 @@ app.post('/api/purchase-rect/checkout', async (req, res) => {
         {
           price_data: {
             currency: quote.currency || 'eur',
-            product_data: {
-              name: `Achat bloc ${w}×${h} à (${x},${y})`,
-            },
+            product_data: { name: `Achat bloc ${w}×${h} à (${x},${y})` },
             unit_amount: quote.totalCents,
           },
           quantity: 1,
@@ -124,11 +116,12 @@ app.post('/api/purchase-rect/checkout', async (req, res) => {
       ],
       metadata: {
         kind: 'rect',
-        x: String(x),
-        y: String(y),
-        w: String(w),
-        h: String(h),
+        x: String(x), y: String(y), w: String(w), h: String(h),
         buyerEmail,
+        // visuels
+        logo: logo || '',
+        color: color || '',
+        message: message || '',
       },
     });
 

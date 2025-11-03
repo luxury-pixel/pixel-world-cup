@@ -47,7 +47,7 @@
       height:calc(100*var(--cell) + 99*var(--gap));
       position:relative; z-index:1;
     }
-    .cell{width:var(--cell);height:var(--cell);background:#2b2f55;border:1px solid #3b3f68;box-sizing:border-box;cursor:pointer;transition:background .12s;}
+    .cell{width:var(--cell);height:var(--cell);background:#2b2f55;border:1px solid #3b3f68;box-sizing:border-box;cursor:pointer;transition:background .12s;background-size:cover;background-position:center;}
     .cell:hover{background:#3b3f68}
     .sel{outline:1px solid #bcd1ff;}
 
@@ -96,7 +96,7 @@
     </div>
   </div>
 
-  <footer>©️ 2025 Pixel World Cup — Démo Render.</footer>
+  <footer>©️ 2025 Pixel World Cup — Démo locale.</footer>
 
   <!-- Modal -->
   <div id="modalWrap" class="modalWrap">
@@ -104,8 +104,7 @@
       <h3>Finaliser l’achat</h3>
       <div class="row"><label>Votre nom</label><input id="mName" placeholder="Nom affiché publiquement"/></div>
       <div class="row"><label>Email</label><input id="mEmail" type="email" placeholder="ton.email@example.com"/></div>
-      <!-- URL corrigée -->
-      <div class="row"><label>URL</label><input id="mLink" placeholder="[https://ton-site.com"/></div]https://ton-site.com"/></div>
+      <div class="row"><label>URL</label><input id="mLink" placeholder="[https://…"/></div]https://…"/></div>
       <div class="row"><label>Couleur</label><input id="mColor" type="color" value="#1e90ff"/></div>
       <div class="row"><label>Logo</label><input id="mLogo" placeholder="https://…/logo.png"/></div>
       <div class="row"><label>Message</label><textarea id="mMsg" rows="2"></textarea></div>
@@ -122,6 +121,7 @@
   <div id="errors"></div>
 
   <script>
+  /* Affichage erreurs runtime */
   (function(){
     const box = document.getElementById('errors');
     window.addEventListener('error', (e)=>{
@@ -137,16 +137,19 @@
     const COLS = 100, ROWS = 100, TOTAL = COLS * ROWS;
     const DEADLINE = new Date('2025-12-31T23:59:59+01:00');
 
-    const grid       = document.getElementById('grid'),
-          gridWrap   = document.getElementById('gridWrap'),
-          box        = document.getElementById('selectionBox'),
-          buyBtn     = document.getElementById('buyBtn'),
-          clearBtn   = document.getElementById('clearSelBtn'),
-          soldEl     = document.getElementById('soldCount'),
-          freeEl     = document.getElementById('freeCount'),
-          countdownEl= document.getElementById('countdown'),
-          modalWrap  = document.getElementById('modalWrap'),
-          mEmail     = document.getElementById('mEmail'),
+    const grid = document.getElementById('grid'),
+          gridWrap = document.getElementById('gridWrap'),
+          box = document.getElementById('selectionBox'),
+          buyBtn = document.getElementById('buyBtn'),
+          clearBtn = document.getElementById('clearSelBtn'),
+          soldEl = document.getElementById('soldCount'),
+          freeEl = document.getElementById('freeCount'),
+          countdownEl = document.getElementById('countdown'),
+          modalWrap = document.getElementById('modalWrap'),
+          mEmail = document.getElementById('mEmail'),
+          mLogo  = document.getElementById('mLogo'),
+          mColor = document.getElementById('mColor'),
+          mMsg   = document.getElementById('mMsg'),
           selCountEl = document.getElementById('selCount'),
           totalPriceEl = document.getElementById('totalPrice');
 
@@ -168,7 +171,7 @@
       return `${x}:${y}`;
     };
 
-    // build grid
+    /* Grille */
     (function buildGrid(){
       const frag = document.createDocumentFragment();
       for(let y=0;y<ROWS;y++){
@@ -182,7 +185,31 @@
       grid.appendChild(frag);
     })();
 
-    // click
+    /* Charger l’état actuel pour afficher couleurs/logos */
+    const API_BASE = window.location.origin;
+    fetch(`${API_BASE}/api/cells`).then(r=>r.json()).then(payload=>{
+      if(!payload?.ok) return;
+      const all = payload.cells || {};
+      let sold = 0;
+      for(const key in all){
+        const hist = all[key];
+        if(!hist || !hist.length) continue;
+        sold++;
+        const last = hist[hist.length-1];
+        const [x,y] = key.split(':');
+        const node = grid.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+        if(!node) continue;
+        if(last.color) node.style.background = last.color;
+        if(last.logo){
+          node.style.backgroundImage = `url(${last.logo})`;
+        }
+        if(last.message) node.title = last.message;
+      }
+      soldEl.textContent = sold.toLocaleString('fr-FR');
+      freeEl.textContent = (TOTAL - sold).toLocaleString('fr-FR');
+    }).catch(()=>{});
+
+    /* clic simple */
     grid.addEventListener('click', (e)=>{
       const cell = e.target.closest('.cell');
       if(!cell) return;
@@ -203,7 +230,7 @@
       updateUI();
     });
 
-    // lasso
+    /* Lasso */
     let dragging = false, startId = null;
     gridWrap.addEventListener('mousedown',(e)=>{
       const id = idAtClientPoint(e.clientX, e.clientY);
@@ -273,6 +300,7 @@
     }
     updateUI();
 
+    /* Ouvrir / fermer modale */
     buyBtn.addEventListener('click', ()=>{
       if(selection.size===0) return;
       if(new Date()>=DEADLINE){ alert('Compétition terminée.'); return; }
@@ -280,6 +308,7 @@
     });
     document.getElementById('cancelBuy').addEventListener('click', ()=> modalWrap.style.display='none');
 
+    /* Compte à rebours */
     (function tick(){
       const ms = DEADLINE - new Date();
       if(ms<=0){ countdownEl.textContent='Terminé'; buyBtn.disabled=true; return; }
@@ -288,14 +317,12 @@
       setTimeout(tick, 1000);
     })();
 
+    /* Clear selection */
     clearBtn.addEventListener('click', ()=>{
       selection.clear();
       grid.querySelectorAll('.cell.sel').forEach(n=>n.classList.remove('sel'));
       updateUI();
     });
-
-    // 👇 hyper important : on envoie vers le même domaine que Render
-    const API_BASE = window.location.origin;
 
     async function postJSON(url, body){
       const r = await fetch(url, {
@@ -307,8 +334,12 @@
       return { ok:r.ok, data };
     }
 
-    // on branche le bouton
-    document.getElementById('confirmStripe').addEventListener('click', onConfirmStripe);
+    (function attachConfirmHandler(){
+      const btn = document.getElementById('confirmStripe');
+      if (!btn){ console.error('⚠️ #confirmStripe introuvable'); return; }
+      btn.addEventListener('click', onConfirmStripe);
+      console.log('✅ Handler confirmStripe attaché.');
+    })();
 
     async function onConfirmStripe(){
       try{
@@ -316,35 +347,41 @@
         const buyerEmail = (mEmail.value||'').trim();
         if(!buyerEmail){ alert('Mets ton email.'); return; }
 
-        // on regroupe en 1 rectangle
+        // calcule un rectangle englobant
         let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
         for(const id of selection){
-          const [x,y] = id.split(':').map(Number);
+          const [x,y]=id.split(':').map(Number);
           minX=Math.min(minX,x); minY=Math.min(minY,y);
           maxX=Math.max(maxX,x); maxY=Math.max(maxY,y);
         }
         const x=minX, y=minY, w=maxX-minX+1, h=maxY-minY+1;
 
-        const payload = { x,y,w,h,buyerEmail };
+        const body = {
+          x,y,w,h,
+          buyerEmail,
+          logo:  (mLogo.value||'').trim(),
+          color: (mColor.value||'').trim(),
+          message: (mMsg.value||'').trim(),
+        };
 
-        // 1) devis
-        const quote = await postJSON(`${API_BASE}/api/purchase-rect/quote`, payload);
-        if(!quote.ok || !quote.data?.ok){
-          console.error('quote_error', quote.data);
-          alert(quote.data?.error || 'Erreur devis (quote_error)');
+        // 1) Devis
+        const q = await postJSON(`${API_BASE}/api/purchase-rect/quote`, body);
+        if(!q.ok || !q.data?.ok){
+          console.error(q.data);
+          alert(q.data?.error || 'Erreur devis (quote_error)');
           return;
         }
 
-        // 2) checkout
-        const pay = await postJSON(`${API_BASE}/api/purchase-rect/checkout`, payload);
-        if(!pay.ok || !pay.data?.ok){
-          console.error('checkout_error', pay.data);
-          alert(pay.data?.error || 'Erreur paiement');
+        // 2) Création session Stripe
+        const r = await postJSON(`${API_BASE}/api/purchase-rect/checkout`, body);
+        if(!r.ok || !r.data?.ok){
+          console.error(r.data);
+          alert(r.data?.error || 'Erreur paiement');
           return;
         }
 
-        // 3) redirection Stripe
-        window.location.href = pay.data.url;
+        // 3) redirection
+        window.location.href = r.data.url;
       } catch(e){
         console.error(e);
         alert('Erreur : ' + (e.message||e));
