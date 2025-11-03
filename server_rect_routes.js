@@ -1,11 +1,11 @@
 // server_rect_routes.js
-const fs   = require('fs');
+const fs = require('fs');
 const path = require('path');
 
 function attachRectRoutes(app, opts = {}) {
   const dbPath = opts.dbPath || path.join(__dirname, 'data', 'db.json');
 
-  // config
+  // config (surchargée par ENV si besoin)
   const GRID_W = parseInt(process.env.GRID_W || '100', 10);
   const GRID_H = parseInt(process.env.GRID_H || '100', 10);
   const BASE_CELL_CENTS = parseInt(process.env.BASE_CELL_CENTS || '10000', 10); // 100€ = 10000
@@ -14,6 +14,7 @@ function attachRectRoutes(app, opts = {}) {
   const CURRENCY = process.env.CURRENCY || 'eur';
   const MAX_LAYERS_PER_CELL = parseInt(process.env.MAX_LAYERS_PER_CELL || '2', 10);
 
+  // s’assurer que le dossier existe
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
   function readDB() {
@@ -32,102 +33,97 @@ function attachRectRoutes(app, opts = {}) {
     fs.writeFileSync(dbPath, JSON.stringify(toWrite, null, 2), 'utf8');
   }
 
+  // prix d’une case selon historique
   function computeCellPriceCents(history) {
     if (!history || history.length === 0) return BASE_CELL_CENTS;
     const last = history[history.length - 1];
     return Math.round(last.priceCents * PRICE_MULTIPLIER);
   }
 
-  // ====== 1) Fonction de calcul de devis (exposée à server.js) ======
-  function calcRectQuote({ x, y, w, h, buyerEmail }) {
-    if (
-      typeof x !== 'number' || typeof y !== 'number' ||
-      typeof w !== 'number' || typeof h !== 'number'
-    ) {
-      return { ok:false, error:'coords_invalides' };
-    }
-    if (!buyerEmail) return { ok:false, error:'buyerEmail_requis' };
-    if (x < 0 || y < 0 || x + w > GRID_W || y + h > GRID_H) {
-      return { ok:false, error:'hors_grille' };
-    }
-
-    const db = readDB();
-
-    let totalCents = 0;
-    let newCells = 0;
-    let overlappedCells = 0;
-
-    // règle du lot (si une cellule a déjà un lotW/H)
-    let requiredLotW = null, requiredLotH = null;
-    for (let yy = y; yy < y + h; yy++) {
-      for (let xx = x; xx < x + w; xx++) {
-        const key = `${xx}:${yy}`;
-        const history = db.cells[key];
-        if (history && history.length > 0) {
-          const first = history[0];
-          if (first.lotW && first.lotH) {
-            requiredLotW = first.lotW;
-            requiredLotH = first.lotH;
-          }
-        }
-      }
-    }
-    if (requiredLotW !== null && requiredLotH !== null) {
-      if (w < requiredLotW || h < requiredLotH) {
-        return {
-          ok:false,
-          error:`lot_minimum_${requiredLotW}x${requiredLotH}`,
-          requiredLotW, requiredLotH
-        };
-      }
-    }
-
-    // prix
-    for (let yy = y; yy < y + h; yy++) {
-      for (let xx = x; xx < x + w; xx++) {
-        const key = `${xx}:${yy}`;
-        const history = db.cells[key];
-        const cellPrice = computeCellPriceCents(history);
-        totalCents += cellPrice;
-        if (!history || history.length === 0) newCells++; else overlappedCells++;
-      }
-    }
-
-    return {
-      ok: true,
-      x,y,w,h,
-      newCells,
-      overlappedCells,
-      totalCents,
-      currency: CURRENCY
-    };
-  }
-  app.locals.calcRectQuote = calcRectQuote;
-
-  // ====== 2) Route HTTP de devis (utilise la même fonction) ======
-  app.post('/api/purchase-rect/quote', (req, res) => {
-    try {
-      const out = calcRectQuote(req.body || {});
-      if (!out.ok) return res.status(400).json(out);
-      return res.json(out);
-    } catch (err) {
-      console.error('quote_error:', err);
-      return res.status(500).json({ error:'quote_error' });
-    }
-  });
-
-  // ====== 3) Exposer l'état des cellules pour affichage front ======
+  // --- GET état des cases (pour affichage) ---
   app.get('/api/cells', (req, res) => {
     try {
       const db = readDB();
-      res.json({ ok:true, cells: db.cells });
+      return res.json(db);
     } catch (e) {
-      res.status(500).json({ ok:false });
+      return res.status(500).json({ cells: {} });
     }
   });
 
-  // ====== 4) Enregistrement après paiement ======
-  function fulfillRectDirect({ x, y, w, h, buyerEmail, logo, color, message }) {
+  // --- 1) DEVIS ---
+  app.post('/api/purchase-rect/quote', (req, res) => {
+    try {
+      const { x, y, w, h, buyerEmail } = req.body || {};
+      if (
+        typeof x !== 'number' || typeof y !== 'number' ||
+        typeof w !== 'number' || typeof h !== 'number'
+      ) {
+        return res.status(400).json({ error: 'coords_invalides' });
+      }
+      if (!buyerEmail) return res.status(400).json({ error: 'buyerEmail_requis' });
+      if (x < 0 || y < 0 || x + w > GRID_W || y + h > GRID_H) {
+        return res.status(400).json({ error: 'hors_grille' });
+      }
+
+      const db = readDB();
+
+      // règle “premier achat = taille de LOT”
+      let requiredLotW = null;
+      let requiredLotH = null;
+      for (let yy = y; yy < y + h; yy++) {
+        for (let xx = x; xx < x + w; xx++) {
+          const key = `${xx}:${yy}`;
+          const history = db.cells[key];
+          if (history && history.length > 0) {
+            const first = history[0];
+            if (first.lotW && first.lotH) {
+              requiredLotW = first.lotW;
+              requiredLotH = first.lotH;
+            }
+          }
+        }
+      }
+      if (requiredLotW !== null && requiredLotH !== null) {
+        if (w < requiredLotW || h < requiredLotH) {
+          return res.status(400).json({
+            error: `lot_minimum_${requiredLotW}x${requiredLotH}`,
+            requiredLotW, requiredLotH
+          });
+        }
+      }
+
+      // calcul du prix
+      let totalCents = 0, newCells = 0, overlappedCells = 0;
+      for (let yy = y; yy < y + h; yy++) {
+        for (let xx = x; xx < x + w; xx++) {
+          const key = `${xx}:${yy}`;
+          const history = db.cells[key];
+          const cellPrice = computeCellPriceCents(history);
+          totalCents += cellPrice;
+          if (!history || history.length === 0) newCells++;
+          else overlappedCells++;
+        }
+      }
+
+      return res.json({
+        ok: true,
+        x, y, w, h,
+        newCells, overlappedCells,
+        totalCents,
+        currency: CURRENCY,
+        lotRule: (requiredLotW && requiredLotH)
+          ? `Ce bloc appartient à un lot initial de ${requiredLotW}x${requiredLotH}`
+          : null
+      });
+
+    } catch (err) {
+      console.error('quote_error:', err);
+      return res.status(500).json({ error: 'quote_error' });
+    }
+  });
+
+  // --- 2) FULFILL (après paiement) ---
+  function fulfillRectDirect({ x, y, w, h, buyerEmail, meta }) {
     try {
       const db = readDB();
 
@@ -151,10 +147,12 @@ function attachRectRoutes(app, opts = {}) {
             at: new Date().toISOString(),
             lotW: w,
             lotH: h,
-            // nouveaux champs visuels
-            logo:   logo || null,
-            color:  color || null,
-            message: message || null,
+            // META visuel
+            name: meta?.name || '',
+            link: meta?.link || '',
+            color: meta?.color || '',
+            logo: meta?.logo || '',
+            msg: meta?.msg || ''
           });
 
           if (history.length > MAX_LAYERS_PER_CELL) {
@@ -173,7 +171,46 @@ function attachRectRoutes(app, opts = {}) {
     }
   }
 
+  // exposé pour server.js
   app.locals.fulfillRectDirect = fulfillRectDirect;
+  app.locals.computeCellPriceCents = computeCellPriceCents;
+
+  // petite fonction locale pour calculer un devis (utilisée dans server.js si besoin)
+  app.locals.calcRectQuote = ({ x, y, w, h, buyerEmail }) => {
+    try{
+      if (typeof x!=='number'||typeof y!=='number'||typeof w!=='number'||typeof h!=='number')
+        return { ok:false, error:'coords_invalides' };
+      if (!buyerEmail) return { ok:false, error:'buyerEmail_requis' };
+      if (x<0||y<0||x+w>GRID_W||y+h>GRID_H) return { ok:false, error:'hors_grille' };
+
+      const db = readDB();
+
+      let requiredLotW=null, requiredLotH=null;
+      for (let yy = y; yy < y + h; yy++) {
+        for (let xx = x; xx < x + w; xx++) {
+          const hist = db.cells[`${xx}:${yy}`];
+          if (hist && hist.length>0) {
+            const first = hist[0];
+            if (first.lotW && first.lotH) { requiredLotW=first.lotW; requiredLotH=first.lotH; }
+          }
+        }
+      }
+      if (requiredLotW!==null && requiredLotH!==null) {
+        if (w<requiredLotW || h<requiredLotH)
+          return { ok:false, error:`lot_minimum_${requiredLotW}x${requiredLotH}`, requiredLotW, requiredLotH };
+      }
+
+      let totalCents=0;
+      for (let yy=y; yy<y+h; yy++){
+        for (let xx=x; xx<x+w; xx++){
+          totalCents += computeCellPriceCents(db.cells[`${xx}:${yy}`]);
+        }
+      }
+      return { ok:true, totalCents, currency:CURRENCY };
+    }catch(e){
+      return { ok:false, error:'quote_error' };
+    }
+  };
 }
 
 module.exports = { attachRectRoutes };

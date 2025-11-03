@@ -47,7 +47,11 @@
       height:calc(100*var(--cell) + 99*var(--gap));
       position:relative; z-index:1;
     }
-    .cell{width:var(--cell);height:var(--cell);background:#2b2f55;border:1px solid #3b3f68;box-sizing:border-box;cursor:pointer;transition:background .12s;background-size:cover;background-position:center;}
+    .cell{
+      width:var(--cell);height:var(--cell);
+      background:#2b2f55;border:1px solid #3b3f68;box-sizing:border-box;cursor:pointer;transition:background .12s;
+      background-size:cover;background-position:center;
+    }
     .cell:hover{background:#3b3f68}
     .sel{outline:1px solid #bcd1ff;}
 
@@ -104,10 +108,10 @@
       <h3>Finaliser l’achat</h3>
       <div class="row"><label>Votre nom</label><input id="mName" placeholder="Nom affiché publiquement"/></div>
       <div class="row"><label>Email</label><input id="mEmail" type="email" placeholder="ton.email@example.com"/></div>
-      <div class="row"><label>URL</label><input id="mLink" placeholder="[https://…"/></div]https://…"/></div>
+      <div class="row"><label>URL</label><input id="mLink" placeholder="[https://ton-site.com"/></div]https://ton-site.com"/></div>
       <div class="row"><label>Couleur</label><input id="mColor" type="color" value="#1e90ff"/></div>
       <div class="row"><label>Logo</label><input id="mLogo" placeholder="https://…/logo.png"/></div>
-      <div class="row"><label>Message</label><textarea id="mMsg" rows="2"></textarea></div>
+      <div class="row"><label>Message</label><textarea id="mMsg" rows="2" placeholder="Slogan / message court"></textarea></div>
       <div class="muted">
         Cases sélectionnées : <b id="selCount">0</b> — Total indicatif : <span class="priceTag" id="totalPrice">0 €</span>
       </div>
@@ -121,7 +125,6 @@
   <div id="errors"></div>
 
   <script>
-  /* Affichage erreurs runtime */
   (function(){
     const box = document.getElementById('errors');
     window.addEventListener('error', (e)=>{
@@ -133,7 +136,7 @@
   })();
 
   document.addEventListener("DOMContentLoaded", () => {
-    const UI_CELL_PRICE_EUR = 100;
+    const UI_CELL_PRICE_EUR = 100; // 💰 affichage
     const COLS = 100, ROWS = 100, TOTAL = COLS * ROWS;
     const DEADLINE = new Date('2025-12-31T23:59:59+01:00');
 
@@ -142,19 +145,22 @@
           box = document.getElementById('selectionBox'),
           buyBtn = document.getElementById('buyBtn'),
           clearBtn = document.getElementById('clearSelBtn'),
+          zoom = document.getElementById('zoom'),
           soldEl = document.getElementById('soldCount'),
           freeEl = document.getElementById('freeCount'),
           countdownEl = document.getElementById('countdown'),
           modalWrap = document.getElementById('modalWrap'),
+          mName = document.getElementById('mName'),
           mEmail = document.getElementById('mEmail'),
-          mLogo  = document.getElementById('mLogo'),
+          mLink = document.getElementById('mLink'),
           mColor = document.getElementById('mColor'),
-          mMsg   = document.getElementById('mMsg'),
+          mLogo = document.getElementById('mLogo'),
+          mMsg = document.getElementById('mMsg'),
           selCountEl = document.getElementById('selCount'),
           totalPriceEl = document.getElementById('totalPrice');
 
     const selection = new Set();
-    const cells = {};
+    const cells = {}; // cache d'affichage
 
     const fmtEUR = c => (Number(c||0)).toLocaleString('fr-FR',{style:'currency',currency:'EUR'});
     const step = () => {
@@ -171,7 +177,7 @@
       return `${x}:${y}`;
     };
 
-    /* Grille */
+    // Construire la grille
     (function buildGrid(){
       const frag = document.createDocumentFragment();
       for(let y=0;y<ROWS;y++){
@@ -185,63 +191,71 @@
       grid.appendChild(frag);
     })();
 
-    /* Charger l’état actuel pour afficher couleurs/logos */
-    const API_BASE = window.location.origin;
-    fetch(`${API_BASE}/api/cells`).then(r=>r.json()).then(payload=>{
-      if(!payload?.ok) return;
-      const all = payload.cells || {};
-      let sold = 0;
-      for(const key in all){
-        const hist = all[key];
-        if(!hist || !hist.length) continue;
-        sold++;
-        const last = hist[hist.length-1];
-        const [x,y] = key.split(':');
-        const node = grid.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
-        if(!node) continue;
-        if(last.color) node.style.background = last.color;
-        if(last.logo){
-          node.style.backgroundImage = `url(${last.logo})`;
-        }
-        if(last.message) node.title = last.message;
-      }
-      soldEl.textContent = sold.toLocaleString('fr-FR');
-      freeEl.textContent = (TOTAL - sold).toLocaleString('fr-FR');
-    }).catch(()=>{});
+    // Peindre depuis le back
+    async function fetchAndPaint(){
+      try{
+        const r = await fetch('/api/cells');
+        if(!r.ok) return;
+        const data = await r.json();
+        const map = data.cells || {};
+        let sold=0;
+        // reset affichage
+        grid.querySelectorAll('.cell').forEach(n=>{
+          n.style.backgroundImage='';
+          n.style.backgroundColor='#2b2f55';
+          n.removeAttribute('data-link');
+        });
+        // colorer les cases vendues
+        Object.entries(map).forEach(([key, history])=>{
+          if(!Array.isArray(history) || history.length===0) return;
+          sold++;
+          const last = history[history.length-1];
+          const [x,y]=key.split(':').map(Number);
+          const node = grid.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+          if(!node) return;
+          if(last.color) node.style.backgroundColor = last.color;
+          if(last.logo)  node.style.backgroundImage = `url("${last.logo}")`;
+          if(last.link)  node.setAttribute('data-link', last.link);
+        });
+        soldEl.textContent = sold.toLocaleString('fr-FR');
+        freeEl.textContent = (TOTAL - sold).toLocaleString('fr-FR');
+      }catch(e){ /* noop */ }
+    }
+    fetchAndPaint();
+    setInterval(fetchAndPaint, 8000); // petit poll pour rafraîchir après paiements
 
-    /* clic simple */
+    // Click pour ouvrir le lien si vendu
+    grid.addEventListener('dblclick',(e)=>{
+      const cell = e.target.closest('.cell');
+      if(!cell) return;
+      const link = cell.getAttribute('data-link');
+      if(link) window.open(link, '_blank');
+    });
+
+    // Clic (multi)
     grid.addEventListener('click', (e)=>{
       const cell = e.target.closest('.cell');
       if(!cell) return;
       const id = `${cell.dataset.x}:${cell.dataset.y}`;
-
       if (e.altKey) {
         selection.clear();
         grid.querySelectorAll('.cell.sel').forEach(n=>n.classList.remove('sel'));
       }
-
-      if (selection.has(id)) {
-        selection.delete(id);
-        cell.classList.remove('sel');
-      } else {
-        selection.add(id);
-        cell.classList.add('sel');
-      }
+      if (selection.has(id)) { selection.delete(id); cell.classList.remove('sel'); }
+      else { selection.add(id); cell.classList.add('sel'); }
       updateUI();
     });
 
-    /* Lasso */
-    let dragging = false, startId = null;
+    // Lasso
+    let dragging=false, startId=null;
     gridWrap.addEventListener('mousedown',(e)=>{
       const id = idAtClientPoint(e.clientX, e.clientY);
       if (!id) return;
       dragging = true; startId = id;
-
       if (e.altKey) {
         selection.clear();
         grid.querySelectorAll('.cell.sel').forEach(n=>n.classList.remove('sel'));
       }
-
       const s = step();
       const [sx, sy] = startId.split(':').map(Number);
       box.style.display='block';
@@ -251,24 +265,20 @@
       box.style.height= s + 'px';
       e.preventDefault();
     });
-
     window.addEventListener('mousemove',(e)=>{
       if(!dragging) return;
       const curId = idAtClientPoint(e.clientX, e.clientY);
       if(!curId) return;
-
       const s = step();
       const [sx, sy] = startId.split(':').map(Number);
       const [cx, cy] = curId.split(':').map(Number);
       const x1 = Math.min(sx, cx), x2 = Math.max(sx, cx);
       const y1 = Math.min(sy, cy), y2 = Math.max(sy, cy);
-
       box.style.display='block';
       box.style.left   = (x1 * s) + 'px';
       box.style.top    = (y1 * s) + 'px';
       box.style.width  = ((x2 - x1 + 1) * s - (parseInt(getComputedStyle(grid).gap)||1)) + 'px';
       box.style.height = ((y2 - y1 + 1) * s - (parseInt(getComputedStyle(grid).gap)||1)) + 'px';
-
       for(let y=y1;y<=y2;y++){
         for(let x=x1;x<=x2;x++){
           const id = `${x}:${y}`;
@@ -281,7 +291,6 @@
       }
       updateUI();
     });
-
     window.addEventListener('mouseup',()=>{
       if(!dragging) return;
       dragging=false; startId=null;
@@ -289,10 +298,9 @@
     });
 
     function updateUI(){
-      const sold = Object.keys(cells).length;
+      const sold = Object.keys(cells).length; // (non bloquant, affichage seulement)
       soldEl.textContent = sold.toLocaleString('fr-FR');
       freeEl.textContent = (TOTAL - sold).toLocaleString('fr-FR');
-
       const qty = selection.size;
       selCountEl.textContent = qty;
       totalPriceEl.textContent = fmtEUR(qty * UI_CELL_PRICE_EUR);
@@ -300,7 +308,12 @@
     }
     updateUI();
 
-    /* Ouvrir / fermer modale */
+    // Zoom ✅
+    zoom.addEventListener('input', e=>{
+      document.documentElement.style.setProperty('--cell', e.target.value+'px');
+    });
+
+    // Modale + countdown + clear
     buyBtn.addEventListener('click', ()=>{
       if(selection.size===0) return;
       if(new Date()>=DEADLINE){ alert('Compétition terminée.'); return; }
@@ -308,7 +321,6 @@
     });
     document.getElementById('cancelBuy').addEventListener('click', ()=> modalWrap.style.display='none');
 
-    /* Compte à rebours */
     (function tick(){
       const ms = DEADLINE - new Date();
       if(ms<=0){ countdownEl.textContent='Terminé'; buyBtn.disabled=true; return; }
@@ -317,19 +329,17 @@
       setTimeout(tick, 1000);
     })();
 
-    /* Clear selection */
     clearBtn.addEventListener('click', ()=>{
       selection.clear();
       grid.querySelectorAll('.cell.sel').forEach(n=>n.classList.remove('sel'));
       updateUI();
     });
 
+    // API du même domaine
+    const API_BASE = window.location.origin;
+
     async function postJSON(url, body){
-      const r = await fetch(url, {
-        method:'POST',
-        headers:{'content-type':'application/json'},
-        body:JSON.stringify(body)
-      });
+      const r = await fetch(url, { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body) });
       const data = await r.json().catch(()=> ({}));
       return { ok:r.ok, data };
     }
@@ -347,7 +357,7 @@
         const buyerEmail = (mEmail.value||'').trim();
         if(!buyerEmail){ alert('Mets ton email.'); return; }
 
-        // calcule un rectangle englobant
+        // rectangle englobant
         let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
         for(const id of selection){
           const [x,y]=id.split(':').map(Number);
@@ -356,38 +366,36 @@
         }
         const x=minX, y=minY, w=maxX-minX+1, h=maxY-minY+1;
 
-        const body = {
-          x,y,w,h,
-          buyerEmail,
-          logo:  (mLogo.value||'').trim(),
-          color: (mColor.value||'').trim(),
-          message: (mMsg.value||'').trim(),
+        const meta = {
+          name:(mName.value||'').trim(),
+          link:(mLink.value||'').trim(),
+          color:(mColor.value||'#1e90ff').trim(),
+          logo:(mLogo.value||'').trim(),
+          msg:(mMsg.value||'').trim(),
         };
 
-        // 1) Devis
-        const q = await postJSON(`${API_BASE}/api/purchase-rect/quote`, body);
-        if(!q.ok || !q.data?.ok){
+        // 1) Devis (vérifie règle de lot & prix)
+        const q = await postJSON(`${API_BASE}/api/purchase-rect/quote`, { x,y,w,h,buyerEmail });
+        if(!q.ok){
           console.error(q.data);
-          alert(q.data?.error || 'Erreur devis (quote_error)');
+          alert(q.data?.error || 'Devis refusé');
           return;
         }
 
-        // 2) Création session Stripe
-        const r = await postJSON(`${API_BASE}/api/purchase-rect/checkout`, body);
+        // 2) Créer la session Stripe avec meta
+        const r = await postJSON(`${API_BASE}/api/purchase-rect/checkout`, { x,y,w,h,buyerEmail, meta });
         if(!r.ok || !r.data?.ok){
           console.error(r.data);
           alert(r.data?.error || 'Erreur paiement');
           return;
         }
 
-        // 3) redirection
-        window.location.href = r.data.url;
+        window.location.href = r.data.url; // → Stripe
       } catch(e){
         console.error(e);
         alert('Erreur : ' + (e.message||e));
       }
     }
-
   });
   </script>
 </body>
