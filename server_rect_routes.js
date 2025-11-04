@@ -5,127 +5,104 @@ const path = require('path');
 function attachRectRoutes(app, opts = {}) {
   const dbPath = opts.dbPath || path.join(__dirname, 'data', 'db.json');
 
-  // config (surchargée par ENV si besoin)
   const GRID_W = parseInt(process.env.GRID_W || '100', 10);
   const GRID_H = parseInt(process.env.GRID_H || '100', 10);
-  const BASE_CELL_CENTS = parseInt(process.env.BASE_CELL_CENTS || '10000', 10); // 100€ = 10000
-  const PRICE_MULTIPLIER = parseFloat(process.env.PRICE_MULTIPLIER || '2');
-  const FUSION_FACTOR = parseFloat(process.env.FUSION_FACTOR || '1.3');
+  const BASE_CELL_CENTS = parseInt(process.env.BASE_CELL_CENTS || '10000', 10); // 100 € / case
+  const PRICE_MULTIPLIER = parseFloat(process.env.PRICE_MULTIPLIER || '2');     // ×2 à la revente
+  const FUSION_FACTOR = parseFloat(process.env.FUSION_FACTOR || '1.3');         // 1,3× reversé à l’ancien (plafonné)
   const CURRENCY = process.env.CURRENCY || 'eur';
   const MAX_LAYERS_PER_CELL = parseInt(process.env.MAX_LAYERS_PER_CELL || '2', 10);
 
-  // s’assurer que le dossier existe
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
   function readDB() {
     try {
       const raw = fs.readFileSync(dbPath, 'utf8');
       const parsed = JSON.parse(raw);
-      return { cells: parsed.cells || {} };
+      return { cells: parsed.cells || {}, meta: parsed.meta || {} };
     } catch {
-      return { cells: {} };
+      return { cells: {}, meta: {} };
     }
   }
 
   function writeDB(db) {
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-    const toWrite = { cells: db.cells || {} };
-    fs.writeFileSync(dbPath, JSON.stringify(toWrite, null, 2), 'utf8');
+    fs.writeFileSync(dbPath, JSON.stringify({
+      cells: db.cells || {},
+      meta:  db.meta  || {}
+    }, null, 2), 'utf8');
   }
 
-  // prix d’une case selon historique
   function computeCellPriceCents(history) {
     if (!history || history.length === 0) return BASE_CELL_CENTS;
     const last = history[history.length - 1];
     return Math.round(last.priceCents * PRICE_MULTIPLIER);
   }
 
-  // --- GET état des cases (pour affichage) ---
-  app.get('/api/cells', (req, res) => {
-    try {
-      const db = readDB();
-      return res.json(db);
-    } catch (e) {
-      return res.status(500).json({ cells: {} });
+  // ============== Devis (exposé aussi en fonction locale) ==============
+  function calcRectQuote({ x, y, w, h, buyerEmail }) {
+    if (![x,y,w,h].every(n => typeof n === 'number')) {
+      return { ok:false, error:'coords_invalides' };
     }
-  });
+    if (!buyerEmail) return { ok:false, error:'buyerEmail_requis' };
+    if (x < 0 || y < 0 || x + w > GRID_W || y + h > GRID_H) {
+      return { ok:false, error:'hors_grille' };
+    }
 
-  // --- 1) DEVIS ---
+    const db = readDB();
+
+    // Règle de lot global (le 1er achat fixe lotW×lotH et origine)
+    if (db.meta.lotW && db.meta.lotH) {
+      const Lw = db.meta.lotW, Lh = db.meta.lotH;
+      const Ox = db.meta.lotX0 ?? 0, Oy = db.meta.lotY0 ?? 0;
+      const alignedX = ((x - Ox) % Lw) === 0;
+      const alignedY = ((y - Oy) % Lh) === 0;
+      const isMultiple = (w % Lw === 0) && (h % Lh === 0);
+      if (!alignedX || !alignedY || !isMultiple) {
+        return {
+          ok:false,
+          error:'lot_alignment_required',
+          message:`Le site est organisé en lots de ${Lw}×${Lh}. Sélectionnez un bloc aligné.`
+        };
+      }
+    }
+
+    let totalCents = 0;
+    for (let yy = y; yy < y + h; yy++) {
+      for (let xx = x; xx < x + w; xx++) {
+        const key = `${xx}:${yy}`;
+        const history = (readDB().cells[key]); // re-read not needed but safe
+        const price = computeCellPriceCents(history);
+        totalCents += price;
+      }
+    }
+    return { ok:true, totalCents, currency:CURRENCY };
+  }
+
+  // Route POST /quote (utilise la même logique)
   app.post('/api/purchase-rect/quote', (req, res) => {
     try {
-      const { x, y, w, h, buyerEmail } = req.body || {};
-      if (
-        typeof x !== 'number' || typeof y !== 'number' ||
-        typeof w !== 'number' || typeof h !== 'number'
-      ) {
-        return res.status(400).json({ error: 'coords_invalides' });
-      }
-      if (!buyerEmail) return res.status(400).json({ error: 'buyerEmail_requis' });
-      if (x < 0 || y < 0 || x + w > GRID_W || y + h > GRID_H) {
-        return res.status(400).json({ error: 'hors_grille' });
-      }
-
-      const db = readDB();
-
-      // règle “premier achat = taille de LOT”
-      let requiredLotW = null;
-      let requiredLotH = null;
-      for (let yy = y; yy < y + h; yy++) {
-        for (let xx = x; xx < x + w; xx++) {
-          const key = `${xx}:${yy}`;
-          const history = db.cells[key];
-          if (history && history.length > 0) {
-            const first = history[0];
-            if (first.lotW && first.lotH) {
-              requiredLotW = first.lotW;
-              requiredLotH = first.lotH;
-            }
-          }
-        }
-      }
-      if (requiredLotW !== null && requiredLotH !== null) {
-        if (w < requiredLotW || h < requiredLotH) {
-          return res.status(400).json({
-            error: `lot_minimum_${requiredLotW}x${requiredLotH}`,
-            requiredLotW, requiredLotH
-          });
-        }
-      }
-
-      // calcul du prix
-      let totalCents = 0, newCells = 0, overlappedCells = 0;
-      for (let yy = y; yy < y + h; yy++) {
-        for (let xx = x; xx < x + w; xx++) {
-          const key = `${xx}:${yy}`;
-          const history = db.cells[key];
-          const cellPrice = computeCellPriceCents(history);
-          totalCents += cellPrice;
-          if (!history || history.length === 0) newCells++;
-          else overlappedCells++;
-        }
-      }
-
-      return res.json({
-        ok: true,
-        x, y, w, h,
-        newCells, overlappedCells,
-        totalCents,
-        currency: CURRENCY,
-        lotRule: (requiredLotW && requiredLotH)
-          ? `Ce bloc appartient à un lot initial de ${requiredLotW}x${requiredLotH}`
-          : null
-      });
-
+      const out = calcRectQuote(req.body || {});
+      if (!out.ok) return res.status(400).json(out);
+      res.json(out);
     } catch (err) {
       console.error('quote_error:', err);
-      return res.status(500).json({ error: 'quote_error' });
+      res.status(500).json({ error: 'quote_error' });
     }
   });
 
-  // --- 2) FULFILL (après paiement) ---
-  function fulfillRectDirect({ x, y, w, h, buyerEmail, meta }) {
+  // ============== Fulfill après paiement ==============
+  function fulfillRectDirect({ x, y, w, h, buyerEmail, logo, link, color, msg }) {
     try {
       const db = readDB();
+
+      // Premier achat → fixe le lot global
+      if (!db.meta.lotW || !db.meta.lotH) {
+        db.meta.lotW = w;
+        db.meta.lotH = h;
+        db.meta.lotX0 = x;
+        db.meta.lotY0 = y;
+      }
 
       for (let yy = y; yy < y + h; yy++) {
         for (let xx = x; xx < x + w; xx++) {
@@ -145,14 +122,8 @@ function attachRectRoutes(app, opts = {}) {
             priceCents: nextPrice,
             paidPreviousCents: payoutToPrevious,
             at: new Date().toISOString(),
-            lotW: w,
-            lotH: h,
-            // META visuel
-            name: meta?.name || '',
-            link: meta?.link || '',
-            color: meta?.color || '',
-            logo: meta?.logo || '',
-            msg: meta?.msg || ''
+            lotX0: x, lotY0: y, lotW: w, lotH: h,
+            logo: logo || '', link: link || '', color: color || '', msg: msg || ''
           });
 
           if (history.length > MAX_LAYERS_PER_CELL) {
@@ -167,50 +138,23 @@ function attachRectRoutes(app, opts = {}) {
       return { ok: true };
     } catch (err) {
       console.error('fulfillRectDirect error:', err);
-      return { ok: false, error: 'fulfill_error' };
+      return { ok:false, error:'fulfill_error' };
     }
   }
 
-  // exposé pour server.js
+  // Exposer pour server.js
   app.locals.fulfillRectDirect = fulfillRectDirect;
-  app.locals.computeCellPriceCents = computeCellPriceCents;
+  app.locals.calcRectQuote     = calcRectQuote;
 
-  // petite fonction locale pour calculer un devis (utilisée dans server.js si besoin)
-  app.locals.calcRectQuote = ({ x, y, w, h, buyerEmail }) => {
-    try{
-      if (typeof x!=='number'||typeof y!=='number'||typeof w!=='number'||typeof h!=='number')
-        return { ok:false, error:'coords_invalides' };
-      if (!buyerEmail) return { ok:false, error:'buyerEmail_requis' };
-      if (x<0||y<0||x+w>GRID_W||y+h>GRID_H) return { ok:false, error:'hors_grille' };
-
+  // ============== Exposition lecture cellules ==============
+  app.get('/api/cells', (req, res) => {
+    try {
       const db = readDB();
-
-      let requiredLotW=null, requiredLotH=null;
-      for (let yy = y; yy < y + h; yy++) {
-        for (let xx = x; xx < x + w; xx++) {
-          const hist = db.cells[`${xx}:${yy}`];
-          if (hist && hist.length>0) {
-            const first = hist[0];
-            if (first.lotW && first.lotH) { requiredLotW=first.lotW; requiredLotH=first.lotH; }
-          }
-        }
-      }
-      if (requiredLotW!==null && requiredLotH!==null) {
-        if (w<requiredLotW || h<requiredLotH)
-          return { ok:false, error:`lot_minimum_${requiredLotW}x${requiredLotH}`, requiredLotW, requiredLotH };
-      }
-
-      let totalCents=0;
-      for (let yy=y; yy<y+h; yy++){
-        for (let xx=x; xx<x+w; xx++){
-          totalCents += computeCellPriceCents(db.cells[`${xx}:${yy}`]);
-        }
-      }
-      return { ok:true, totalCents, currency:CURRENCY };
-    }catch(e){
-      return { ok:false, error:'quote_error' };
+      res.json({ ok:true, cells: db.cells });
+    } catch {
+      res.status(500).json({ ok:false, error:'cells_error' });
     }
-  };
+  });
 }
 
 module.exports = { attachRectRoutes };
