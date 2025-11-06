@@ -8,10 +8,10 @@ function attachRectRoutes(app, opts = {}) {
   // Config (surchargée par .env si présent)
   const GRID_W = parseInt(process.env.GRID_W || '100', 10);
   const GRID_H = parseInt(process.env.GRID_H || '100', 10);
-  const BASE_CELL_CENTS  = parseInt(process.env.BASE_CELL_CENTS || '10000', 10); // 100€ = 10000
-  const PRICE_MULTIPLIER = parseFloat(process.env.PRICE_MULTIPLIER || '2');      // ×2 à chaque revente
-  const FUSION_FACTOR    = parseFloat(process.env.FUSION_FACTOR    || '1.3');    // 1,3× reversé (plafonné)
-  const CURRENCY         = process.env.CURRENCY || 'eur';
+  const BASE_CELL_CENTS   = parseInt(process.env.BASE_CELL_CENTS || '10000', 10); // 100€ = 10000
+  const PRICE_MULTIPLIER  = parseFloat(process.env.PRICE_MULTIPLIER || '2');      // ×2 à chaque revente
+  const FUSION_FACTOR     = parseFloat(process.env.FUSION_FACTOR     || '1.3');    // 1,3× reversé (plafonné)
+  const CURRENCY          = process.env.CURRENCY || 'eur';
   const MAX_LAYERS_PER_CELL = parseInt(process.env.MAX_LAYERS_PER_CELL || '2', 10);
 
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
@@ -163,7 +163,7 @@ function attachRectRoutes(app, opts = {}) {
     }
   }
 
-  // --------- Lecture de l’état pour le front ----------
+  // --------- Lecture état pour le front ----------
   app.get('/api/cells', (req,res) => {
     try {
       const db = readDB();
@@ -185,6 +185,7 @@ function attachRectRoutes(app, opts = {}) {
 }
 
 module.exports = { attachRectRoutes };
+
 
 
 

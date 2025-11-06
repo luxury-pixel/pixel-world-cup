@@ -97,7 +97,7 @@
   </div>
 </div>
 
-<footer>©️ 2025 Pixel World Cup — Démo locale.</footer>
+<footer>©️ 2025 Pixel World Cup.</footer>
 
 <!-- Modal -->
 <div id="modalWrap" class="modalWrap">
@@ -109,10 +109,13 @@
     <div class="row"><label>Couleur</label><input id="mColor" type="color" value="#1e90ff"/></div>
     <div class="row"><label>Logo</label><input id="mLogo" placeholder="https://…/logo.png"/></div>
     <div class="row"><label>Message</label><textarea id="mMsg" rows="2" placeholder="Petit message optionnel…"></textarea></div>
-    <div class="muted">Cases sélectionnées : <b id="selCount">0</b> — Total indicatif : <span class="priceTag" id="totalPrice">0 €</span></div>
+    <div class="muted">
+      Cases sélectionnées : <b id="selCount">0</b> — Total indicatif : <span class="priceTag" id="totalPrice">0 €</span>
+      <div id="lotRule" class="muted"></div>
+    </div>
     <div class="actions">
       <button id="cancelBuy" class="btn">Annuler</button>
-      <button id="confirmStripe" class="btn primary">Confirmer & Payer</button>
+      <button id="confirmStripe" class="btn primary" disabled>Confirmer & Payer</button>
     </div>
   </div>
 </div>
@@ -132,7 +135,6 @@
 })();
 
 document.addEventListener("DOMContentLoaded", () => {
-  const UI_CELL_PRICE_EUR = 100; // affichage indicatif
   const COLS=100, ROWS=100, TOTAL=COLS*ROWS;
   const DEADLINE=new Date('2025-12-31T23:59:59+01:00');
 
@@ -148,13 +150,15 @@ document.addEventListener("DOMContentLoaded", () => {
         modalWrap=document.getElementById('modalWrap'),
         mEmail=document.getElementById('mEmail'),
         selCountEl=document.getElementById('selCount'),
-        totalPriceEl=document.getElementById('totalPrice');
+        totalPriceEl=document.getElementById('totalPrice'),
+        lotRuleEl=document.getElementById('lotRule'),
+        confirmBtn=document.getElementById('confirmStripe');
 
   const selection = new Set(); // "x:y"
-  const cells = {}; // placeholder
   let LAST_GRID_DATA = null;
+  let LAST_QUOTE = null;
 
-  const fmtEUR = c => (Number(c||0)).toLocaleString('fr-FR',{style:'currency',currency:'EUR'});
+  const fmtEUR = cents => (Number(cents||0)/100).toLocaleString('fr-FR',{style:'currency',currency:'EUR'});
   const stepPx = () => {
     const cell = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell'))||14;
     const gap  = parseInt(getComputedStyle(grid).gap)||1;
@@ -183,14 +187,10 @@ document.addEventListener("DOMContentLoaded", () => {
     grid.appendChild(frag);
   })();
 
-  /* clic simple multi-sélection (ALT = remplace) */
+  /* clic simple (ALT = remplace) */
   grid.addEventListener('click', (e)=>{
     const cell = e.target.closest('.cell');
     if(!cell) return;
-    if (cell.classList.contains('sold')) {
-      // vendu → ne pas re-sélectionner
-      return;
-    }
     const id = `${cell.dataset.x}:${cell.dataset.y}`;
 
     if (e.altKey) {
@@ -248,7 +248,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if(!selection.has(id)){
           selection.add(id);
           const node = grid.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
-          if (node && !node.classList.contains('sold')) node.classList.add('sel');
+          if (node) node.classList.add('sel');
         }
       }
     }
@@ -261,6 +261,17 @@ document.addEventListener("DOMContentLoaded", () => {
     box.style.display='none';
   });
 
+  function currentRect(){
+    if (selection.size===0) return null;
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    for(const id of selection){
+      const [x,y]=id.split(':').map(Number);
+      minX=Math.min(minX,x); minY=Math.min(minY,y);
+      maxX=Math.max(maxX,x); maxY=Math.max(maxY,y);
+    }
+    return { x:minX, y:minY, w:maxX-minX+1, h:maxY-minY+1 };
+  }
+
   function updateUI(){
     const sold = (LAST_GRID_DATA && LAST_GRID_DATA.cells) ? Object.keys(LAST_GRID_DATA.cells).length : 0;
     soldEl.textContent = sold.toLocaleString('fr-FR');
@@ -268,14 +279,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const qty = selection.size;
     selCountEl.textContent = qty;
-    totalPriceEl.textContent = fmtEUR(qty * UI_CELL_PRICE_EUR);
+    // On n’affiche plus 100€/case ici: on remplace dès qu’un devis arrive.
+    totalPriceEl.textContent = qty ? 'Calcul…' : '0 €';
     buyBtn.disabled = qty === 0 || new Date()>=DEADLINE;
+    confirmBtn.disabled = true;
+    lotRuleEl.textContent = '';
   }
 
   /* Modale + countdown + clear */
-  buyBtn.addEventListener('click', ()=>{
+  buyBtn.addEventListener('click', async ()=>{
     if(selection.size===0) return;
     if(new Date()>=DEADLINE){ alert('Compétition terminée.'); return; }
+
+    // Quand on ouvre la modale, on calcule un DEVIS RÉEL
+    await refreshQuoteInModal();
     modalWrap.style.display='flex';
   });
   document.getElementById('cancelBuy').addEventListener('click', ()=> modalWrap.style.display='none');
@@ -308,7 +325,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const r = await fetch(`${API_BASE}/api/cells`);
       const data = await r.json();
       if (data && data.ok) renderSoldAndLogos(data);
-      updateUI();
+      // pas d’alert si vide
     }catch(e){ console.warn('loadGridState error', e); }
   }
 
@@ -324,7 +341,7 @@ document.addEventListener("DOMContentLoaded", () => {
     art.id = 'artLayer';
     art.style.position='absolute';
     art.style.inset='0';
-    art.style.pointerEvents='none';
+    art.style.pointerEvents='none'; // le lien est dans le box, mais on garde la sélection par-dessus si besoin
     wrap.appendChild(art);
 
     // marquer vendues
@@ -336,14 +353,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // une image par lot (lotOriginX/Y)
+    const gap = parseInt(getComputedStyle(grid).gap)||1;
     for (const key of Object.keys(data.cells||{})) {
       const info = data.cells[key];
       const [cx,cy] = key.split(':').map(Number);
       if (info.lotOriginX === cx && info.lotOriginY === cy) {
         const left = info.lotOriginX * s;
         const top  = info.lotOriginY * s;
-        const wpx  = info.lotW * s - (parseInt(getComputedStyle(grid).gap)||1);
-        const hpx  = info.lotH * s - (parseInt(getComputedStyle(grid).gap)||1);
+        const wpx  = info.lotW * s - gap;
+        const hpx  = info.lotH * s - gap;
 
         const box = document.createElement('a');
         box.href = info.link || '#';
@@ -364,7 +382,7 @@ document.addEventListener("DOMContentLoaded", () => {
           img.alt = info.name || '';
           img.style.width='100%';
           img.style.height='100%';
-          img.style.objectFit='contain';
+          img.style.objectFit='contain'; /* une seule image étirée sur tout le lot */
           img.style.display='block';
           box.appendChild(img);
         } else {
@@ -381,27 +399,43 @@ document.addEventListener("DOMContentLoaded", () => {
     if (LAST_GRID_DATA) renderSoldAndLogos(LAST_GRID_DATA);
   });
 
+  async function refreshQuoteInModal(){
+    try{
+      const rect = currentRect();
+      if (!rect){ totalPriceEl.textContent='0 €'; confirmBtn.disabled=true; return; }
+
+      const buyerEmail=(mEmail.value||'').trim() || 'temp@example.com';
+      const body = { ...rect, buyerEmail };
+
+      const q = await postJSON(`${API_BASE}/api/purchase-rect/quote`, body);
+      if(!q.ok){ totalPriceEl.textContent='—'; lotRuleEl.textContent=''; confirmBtn.disabled=true; return; }
+
+      LAST_QUOTE = q.data; // contient totalCents, lotRule éventuelle
+      totalPriceEl.textContent = (q.data && typeof q.data.totalCents==='number') ? fmtEUR(q.data.totalCents) : '—';
+      lotRuleEl.textContent = q.data?.lotRule ? ('Règle : ' + q.data.lotRule) : '';
+      confirmBtn.disabled = false;
+    }catch(e){
+      console.error(e);
+      totalPriceEl.textContent='—';
+      confirmBtn.disabled=true;
+    }
+  }
+
+  // recalculer devis si l’email change avant « payer »
+  mEmail.addEventListener('change', refreshQuoteInModal);
+
   // attach confirm handler
   (function(){
-    const btn = document.getElementById('confirmStripe');
-    if (!btn){ console.error('⚠️ #confirmStripe introuvable'); return; }
-    btn.addEventListener('click', onConfirmStripe);
+    if (!confirmBtn){ console.error('⚠️ #confirmStripe introuvable'); return; }
+    confirmBtn.addEventListener('click', onConfirmStripe);
   })();
 
   async function onConfirmStripe(){
     try{
-      if (selection.size===0){ alert('Sélectionne des cases.'); return; }
+      const rect = currentRect();
+      if (!rect){ alert('Sélectionne des cases.'); return; }
       const buyerEmail=(mEmail.value||'').trim();
       if(!buyerEmail){ alert('Mets ton email.'); return; }
-
-      // rectangle englobant
-      let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
-      for(const id of selection){
-        const [x,y]=id.split(':').map(Number);
-        minX=Math.min(minX,x); minY=Math.min(minY,y);
-        maxX=Math.max(maxX,x); maxY=Math.max(maxY,y);
-      }
-      const x=minX, y=minY, w=maxX-minX+1, h=maxY-minY+1;
 
       // métadonnées d’affichage
       const name  = (document.getElementById('mName').value||'').trim();
@@ -410,17 +444,16 @@ document.addEventListener("DOMContentLoaded", () => {
       const color = (document.getElementById('mColor').value||'#1e90ff').trim();
       const msg   = (document.getElementById('mMsg').value||'').trim();
 
-      const body = { x,y,w,h,buyerEmail, name, link, logo, color, msg };
+      const body = { ...rect, buyerEmail, name, link, logo, color, msg };
 
-      // 1) devis
-      const quote = await postJSON(`${API_BASE}/api/purchase-rect/quote`, body);
-      if(!quote.ok){
-        console.error(quote.data);
-        alert(quote.data?.error || 'Devis refusé');
+      // sécurité : revalider le devis serveur juste avant
+      const q = await postJSON(`${API_BASE}/api/purchase-rect/quote`, body);
+      if(!q.ok){
+        console.error(q.data);
+        alert(q.data?.error || 'Devis refusé');
         return;
       }
 
-      // 2) checkout
       const r = await postJSON(`${API_BASE}/api/purchase-rect/checkout`, body);
       if(!r.ok || !r.data?.ok){
         console.error(r.data);
@@ -440,3 +473,4 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 </body>
 </html>
+

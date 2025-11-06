@@ -34,7 +34,6 @@ app.post(
             w: Number(session.metadata.w),
             h: Number(session.metadata.h),
             buyerEmail: session.metadata.buyerEmail,
-            // on véhicule aussi les infos d’affichage
             name:  session.metadata.name  || '',
             link:  session.metadata.link  || '',
             logo:  session.metadata.logo  || '',
@@ -66,7 +65,7 @@ app.use(
   })
 );
 
-// ⚠️ À partir d’ici on peut parser du JSON (le webhook était en RAW)
+// ⚠️ Après le webhook RAW seulement
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -88,7 +87,7 @@ attachRectRoutes(app, {
   dbPath: path.join(__dirname, 'data', 'db.json'),
 });
 
-/* 5) Stripe checkout (appelle la fonction locale de devis) */
+/* 5) Stripe checkout (utilise la fonction locale de devis) */
 app.post('/api/purchase-rect/checkout', async (req, res) => {
   try {
     const { x, y, w, h, buyerEmail, name, link, logo, color, msg } = req.body || {};
@@ -114,9 +113,7 @@ app.post('/api/purchase-rect/checkout', async (req, res) => {
         {
           price_data: {
             currency: quote.currency || 'eur',
-            product_data: {
-              name: `Achat bloc ${w}×${h} à (${x},${y})`,
-            },
+            product_data: { name: `Achat bloc ${w}×${h} à (${x},${y})` },
             unit_amount: quote.totalCents,
           },
           quantity: 1,
@@ -124,10 +121,7 @@ app.post('/api/purchase-rect/checkout', async (req, res) => {
       ],
       metadata: {
         kind: 'rect',
-        x: String(x),
-        y: String(y),
-        w: String(w),
-        h: String(h),
+        x: String(x), y: String(y), w: String(w), h: String(h),
         buyerEmail,
         name:  (name  || '').slice(0,200),
         link:  (link  || '').slice(0,500),
@@ -146,9 +140,8 @@ app.post('/api/purchase-rect/checkout', async (req, res) => {
 
 /* 6) lancement */
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Serveur prêt sur Render - Port ${PORT}`);
+  console.log(`✅ Serveur prêt - Port ${PORT}`);
 });
-
 
 
 
