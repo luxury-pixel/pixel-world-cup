@@ -50,7 +50,7 @@
     .cell{width:var(--cell);height:var(--cell);background:#2b2f55;border:1px solid #3b3f68;box-sizing:border-box;cursor:pointer;transition:background .12s;}
     .cell:hover{background:#3b3f68}
     .sel{outline:1px solid #bcd1ff;}
-    .sold{background:#1e223f;border-color:#535a87;cursor:default;}
+    .sold{background:#1e223f;border-color:#535a87;}
 
     #selectionBox{
       position:absolute;pointer-events:none;border:2px dashed #7fb3ff;
@@ -158,7 +158,6 @@ document.addEventListener("DOMContentLoaded", () => {
   let LAST_GRID_DATA = null;
   let LAST_QUOTE = null;
 
-  const fmtEUR = cents => (Number(cents||0)/100).toLocaleString('fr-FR',{style:'currency',currency:'EUR'});
   const stepPx = () => {
     const cell = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell'))||14;
     const gap  = parseInt(getComputedStyle(grid).gap)||1;
@@ -187,7 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
     grid.appendChild(frag);
   })();
 
-  /* clic simple (ALT = remplace) */
+  /* clic simple (ALT = remplace) — ON PERMET de sélectionner même si "sold" (le serveur validera) */
   grid.addEventListener('click', (e)=>{
     const cell = e.target.closest('.cell');
     if(!cell) return;
@@ -200,7 +199,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (selection.has(id)) { selection.delete(id); cell.classList.remove('sel'); }
     else { selection.add(id); cell.classList.add('sel'); }
-    updateUI();
+    updateUI(false);
   });
 
   /* Lasso */
@@ -252,7 +251,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
     }
-    updateUI();
+    updateUI(false);
   });
 
   window.addEventListener('mouseup',()=>{
@@ -272,26 +271,25 @@ document.addEventListener("DOMContentLoaded", () => {
     return { x:minX, y:minY, w:maxX-minX+1, h:maxY-minY+1 };
   }
 
-  function updateUI(){
+  function updateUI(resetPrice=true){
     const sold = (LAST_GRID_DATA && LAST_GRID_DATA.cells) ? Object.keys(LAST_GRID_DATA.cells).length : 0;
     soldEl.textContent = sold.toLocaleString('fr-FR');
     freeEl.textContent = (TOTAL - sold).toLocaleString('fr-FR');
 
     const qty = selection.size;
     selCountEl.textContent = qty;
-    // On n’affiche plus 100€/case ici: on remplace dès qu’un devis arrive.
-    totalPriceEl.textContent = qty ? 'Calcul…' : '0 €';
+    if (resetPrice) {
+      totalPriceEl.textContent = qty ? 'Calcul…' : '0 €';
+      lotRuleEl.textContent = '';
+      confirmBtn.disabled = true;
+    }
     buyBtn.disabled = qty === 0 || new Date()>=DEADLINE;
-    confirmBtn.disabled = true;
-    lotRuleEl.textContent = '';
   }
 
   /* Modale + countdown + clear */
   buyBtn.addEventListener('click', async ()=>{
     if(selection.size===0) return;
     if(new Date()>=DEADLINE){ alert('Compétition terminée.'); return; }
-
-    // Quand on ouvre la modale, on calcule un DEVIS RÉEL
     await refreshQuoteInModal();
     modalWrap.style.display='flex';
   });
@@ -325,7 +323,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const r = await fetch(`${API_BASE}/api/cells`);
       const data = await r.json();
       if (data && data.ok) renderSoldAndLogos(data);
-      // pas d’alert si vide
     }catch(e){ console.warn('loadGridState error', e); }
   }
 
@@ -337,59 +334,75 @@ document.addEventListener("DOMContentLoaded", () => {
     // retirer ancien calque
     let art = document.getElementById('artLayer');
     if (art) art.remove();
+
+    // calque cliquable
     art = document.createElement('div');
     art.id = 'artLayer';
     art.style.position='absolute';
     art.style.inset='0';
-    art.style.pointerEvents='none'; // le lien est dans le box, mais on garde la sélection par-dessus si besoin
+    art.style.pointerEvents='auto'; // ✅ liens cliquables
     wrap.appendChild(art);
 
-    // marquer vendues
+    // reset "sold"
     grid.querySelectorAll('.cell.sold').forEach(n=>n.classList.remove('sold'));
-    for (const key of Object.keys(data.cells||{})) {
-      const [cx,cy] = key.split(':').map(Number);
-      const n = grid.querySelector(`.cell[data-x="${cx}"][data-y="${cy}"]`);
-      if (n) n.classList.add('sold');
+
+    // grouper par lot (lotOriginX/Y)
+    const lots = {};
+    for (const key of Object.keys(data.cells || {})) {
+      const info = data.cells[key];
+      const lotKey = `${info.lotOriginX}:${info.lotOriginY}`;
+      if (!lots[lotKey]) lots[lotKey] = info;
     }
 
-    // une image par lot (lotOriginX/Y)
     const gap = parseInt(getComputedStyle(grid).gap)||1;
-    for (const key of Object.keys(data.cells||{})) {
-      const info = data.cells[key];
-      const [cx,cy] = key.split(':').map(Number);
-      if (info.lotOriginX === cx && info.lotOriginY === cy) {
-        const left = info.lotOriginX * s;
-        const top  = info.lotOriginY * s;
-        const wpx  = info.lotW * s - gap;
-        const hpx  = info.lotH * s - gap;
 
-        const box = document.createElement('a');
-        box.href = info.link || '#';
-        box.target = '_blank';
-        box.style.position='absolute';
-        box.style.left = left+'px';
-        box.style.top  = top+'px';
-        box.style.width  = wpx+'px';
-        box.style.height = hpx+'px';
-        box.style.outline = '2px solid #17ffd5';
-        box.style.borderRadius='2px';
-        box.style.pointerEvents='auto';
-        box.title = info.name || '';
+    for (const lotKey of Object.keys(lots)) {
+      const info = lots[lotKey];
 
-        if (info.logo) {
-          const img = document.createElement('img');
-          img.src = info.logo;
-          img.alt = info.name || '';
-          img.style.width='100%';
-          img.style.height='100%';
-          img.style.objectFit='contain'; /* une seule image étirée sur tout le lot */
-          img.style.display='block';
-          box.appendChild(img);
-        } else {
-          box.style.background = info.color || '#1e90ff';
+      // marquer vendues
+      for (let yy = info.lotOriginY; yy < info.lotOriginY + info.lotH; yy++) {
+        for (let xx = info.lotOriginX; xx < info.lotOriginX + info.lotW; xx++) {
+          const node = grid.querySelector(`.cell[data-x="${xx}"][data-y="${yy}"]`);
+          if (node) node.classList.add('sold');
         }
-        art.appendChild(box);
       }
+
+      // box unique par lot
+      const left = info.lotOriginX * s;
+      const top  = info.lotOriginY * s;
+      const wpx  = info.lotW * s - gap;
+      const hpx  = info.lotH * s - gap;
+
+      const box = document.createElement('a');
+      box.href = info.link || '#';
+      box.target = '_blank';
+      box.style.position='absolute';
+      box.style.left = left+'px';
+      box.style.top  = top+'px';
+      box.style.width  = wpx+'px';
+      box.style.height = hpx+'px';
+      box.style.border = '1px solid #17ffd5';
+      box.style.borderRadius='2px';
+      box.title = info.name || '';
+
+      if (info.logo) {
+        const img = document.createElement('img');
+        img.src = info.logo;
+        img.alt = info.name || '';
+        img.style.width='100%';
+        img.style.height='100%';
+        img.style.objectFit='contain'; // ✅ image unique étirée sur le lot
+        img.style.display='block';
+        box.appendChild(img);
+      } else {
+        box.style.background = info.color || '#1e90ff';
+      }
+
+      box.addEventListener('dblclick', () => {
+        if (info.link) window.open(info.link, '_blank');
+      });
+
+      art.appendChild(box);
     }
   }
 
@@ -410,8 +423,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const q = await postJSON(`${API_BASE}/api/purchase-rect/quote`, body);
       if(!q.ok){ totalPriceEl.textContent='—'; lotRuleEl.textContent=''; confirmBtn.disabled=true; return; }
 
-      LAST_QUOTE = q.data; // contient totalCents, lotRule éventuelle
-      totalPriceEl.textContent = (q.data && typeof q.data.totalCents==='number') ? fmtEUR(q.data.totalCents) : '—';
+      LAST_QUOTE = q.data;
+      const euros = (q.data.totalCents||0)/100;
+      totalPriceEl.textContent = euros.toLocaleString('fr-FR',{style:'currency',currency:'EUR'});
       lotRuleEl.textContent = q.data?.lotRule ? ('Règle : ' + q.data.lotRule) : '';
       confirmBtn.disabled = false;
     }catch(e){
@@ -421,10 +435,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // recalculer devis si l’email change avant « payer »
   mEmail.addEventListener('change', refreshQuoteInModal);
 
-  // attach confirm handler
   (function(){
     if (!confirmBtn){ console.error('⚠️ #confirmStripe introuvable'); return; }
     confirmBtn.addEventListener('click', onConfirmStripe);
@@ -437,7 +449,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const buyerEmail=(mEmail.value||'').trim();
       if(!buyerEmail){ alert('Mets ton email.'); return; }
 
-      // métadonnées d’affichage
       const name  = (document.getElementById('mName').value||'').trim();
       const link  = (document.getElementById('mLink').value||'').trim();
       const logo  = (document.getElementById('mLogo').value||'').trim();
@@ -446,7 +457,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const body = { ...rect, buyerEmail, name, link, logo, color, msg };
 
-      // sécurité : revalider le devis serveur juste avant
+      // revérifier le devis serveur
       const q = await postJSON(`${API_BASE}/api/purchase-rect/quote`, body);
       if(!q.ok){
         console.error(q.data);
@@ -467,8 +478,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // premier chargement
+  // rafraîchir quand on revient de Stripe (onglet re-visible)
+  document.addEventListener('visibilitychange', ()=>{
+    if (!document.hidden) loadGridState();
+  });
+
+  // premier chargement + petit poll toutes les 20s
   loadGridState();
+  setInterval(loadGridState, 20000);
 });
 </script>
 </body>
