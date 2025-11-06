@@ -5,11 +5,12 @@ const path = require('path');
 function attachRectRoutes(app, opts = {}) {
   const dbPath = opts.dbPath || path.join(__dirname, 'data', 'db.json');
 
+  // ⚙️ Config
   const GRID_W = parseInt(process.env.GRID_W || '100', 10);
   const GRID_H = parseInt(process.env.GRID_H || '100', 10);
-  const BASE_CELL_CENTS = parseInt(process.env.BASE_CELL_CENTS || '10000', 10); // 100 € / case
-  const PRICE_MULTIPLIER = parseFloat(process.env.PRICE_MULTIPLIER || '2');     // ×2 à la revente
-  const FUSION_FACTOR = parseFloat(process.env.FUSION_FACTOR || '1.3');         // 1,3× reversé à l’ancien (plafonné)
+  const BASE_CELL_CENTS = parseInt(process.env.BASE_CELL_CENTS || '10000', 10); // 100 € = 10000 cents
+  const PRICE_MULTIPLIER = parseFloat(process.env.PRICE_MULTIPLIER || '2');     // ×2 à chaque revente
+  const FUSION_FACTOR = parseFloat(process.env.FUSION_FACTOR || '1.3');         // 1,3× à reverser (plafonné)
   const CURRENCY = process.env.CURRENCY || 'eur';
   const MAX_LAYERS_PER_CELL = parseInt(process.env.MAX_LAYERS_PER_CELL || '2', 10);
 
@@ -19,18 +20,22 @@ function attachRectRoutes(app, opts = {}) {
     try {
       const raw = fs.readFileSync(dbPath, 'utf8');
       const parsed = JSON.parse(raw);
-      return { cells: parsed.cells || {}, meta: parsed.meta || {} };
+      return {
+        cells: parsed.cells || {},
+        placements: parsed.placements || []  // liste des “bannières” posées (un enregistrement par achat)
+      };
     } catch {
-      return { cells: {}, meta: {} };
+      return { cells: {}, placements: [] };
     }
   }
 
   function writeDB(db) {
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-    fs.writeFileSync(dbPath, JSON.stringify({
+    const out = {
       cells: db.cells || {},
-      meta:  db.meta  || {}
-    }, null, 2), 'utf8');
+      placements: db.placements || []
+    };
+    fs.writeFileSync(dbPath, JSON.stringify(out, null, 2), 'utf8');
   }
 
   function computeCellPriceCents(history) {
@@ -39,123 +44,194 @@ function attachRectRoutes(app, opts = {}) {
     return Math.round(last.priceCents * PRICE_MULTIPLIER);
   }
 
-  // ============== Devis (exposé aussi en fonction locale) ==============
-  function calcRectQuote({ x, y, w, h, buyerEmail }) {
-    if (![x,y,w,h].every(n => typeof n === 'number')) {
-      return { ok:false, error:'coords_invalides' };
-    }
-    if (!buyerEmail) return { ok:false, error:'buyerEmail_requis' };
-    if (x < 0 || y < 0 || x + w > GRID_W || y + h > GRID_H) {
-      return { ok:false, error:'hors_grille' };
-    }
-
-    const db = readDB();
-
-    // Règle de lot global (le 1er achat fixe lotW×lotH et origine)
-    if (db.meta.lotW && db.meta.lotH) {
-      const Lw = db.meta.lotW, Lh = db.meta.lotH;
-      const Ox = db.meta.lotX0 ?? 0, Oy = db.meta.lotY0 ?? 0;
-      const alignedX = ((x - Ox) % Lw) === 0;
-      const alignedY = ((y - Oy) % Lh) === 0;
-      const isMultiple = (w % Lw === 0) && (h % Lh === 0);
-      if (!alignedX || !alignedY || !isMultiple) {
-        return {
-          ok:false,
-          error:'lot_alignment_required',
-          message:`Le site est organisé en lots de ${Lw}×${Lh}. Sélectionnez un bloc aligné.`
-        };
-      }
-    }
-
-    let totalCents = 0;
-    for (let yy = y; yy < y + h; yy++) {
-      for (let xx = x; xx < x + w; xx++) {
-        const key = `${xx}:${yy}`;
-        const history = (readDB().cells[key]); // re-read not needed but safe
-        const price = computeCellPriceCents(history);
-        totalCents += price;
-      }
-    }
-    return { ok:true, totalCents, currency:CURRENCY };
-  }
-
-  // Route POST /quote (utilise la même logique)
+  // -------- DEVIS (quote) --------
   app.post('/api/purchase-rect/quote', (req, res) => {
     try {
-      const out = calcRectQuote(req.body || {});
-      if (!out.ok) return res.status(400).json(out);
-      res.json(out);
-    } catch (err) {
-      console.error('quote_error:', err);
-      res.status(500).json({ error: 'quote_error' });
-    }
-  });
-
-  // ============== Fulfill après paiement ==============
-  function fulfillRectDirect({ x, y, w, h, buyerEmail, logo, link, color, msg }) {
-    try {
-      const db = readDB();
-
-      // Premier achat → fixe le lot global
-      if (!db.meta.lotW || !db.meta.lotH) {
-        db.meta.lotW = w;
-        db.meta.lotH = h;
-        db.meta.lotX0 = x;
-        db.meta.lotY0 = y;
+      const { x, y, w, h, buyerEmail } = req.body || {};
+      if ([x,y,w,h].some(v => typeof v !== 'number')) {
+        return res.status(400).json({ error: 'coords_invalides' });
+      }
+      if (!buyerEmail) return res.status(400).json({ error: 'buyerEmail_requis' });
+      if (x < 0 || y < 0 || x + w > GRID_W || y + h > GRID_H) {
+        return res.status(400).json({ error: 'hors_grille' });
       }
 
+      const db = readDB();
+
+      // Règle “le premier délimite le lot”
+      let requiredLotW = null, requiredLotH = null;
       for (let yy = y; yy < y + h; yy++) {
         for (let xx = x; xx < x + w; xx++) {
           const key = `${xx}:${yy}`;
-          const history = db.cells[key] || [];
-          const nextPrice = computeCellPriceCents(history);
+          const hist = db.cells[key];
+          if (hist && hist.length > 0) {
+            const first = hist[0];
+            if (first.lotW && first.lotH) {
+              requiredLotW = first.lotW;
+              requiredLotH = first.lotH;
+            }
+          }
+        }
+      }
+      if (requiredLotW !== null && requiredLotH !== null) {
+        if (w < requiredLotW || h < requiredLotH) {
+          return res.status(400).json({
+            error: 'lot_alignment_required',
+            requiredLotW, requiredLotH,
+            message: `Ce bloc appartient à un lot initial de ${requiredLotW}×${requiredLotH}. Sélectionne au moins cette taille.`
+          });
+        }
+      }
+
+      // Prix
+      let totalCents = 0, newCells = 0, overlappedCells = 0;
+      for (let yy = y; yy < y + h; yy++) {
+        for (let xx = x; xx < x + w; xx++) {
+          const key = `${xx}:${yy}`;
+          const hist = db.cells[key];
+          const p = computeCellPriceCents(hist);
+          totalCents += p;
+          if (!hist || hist.length === 0) newCells++; else overlappedCells++;
+        }
+      }
+
+      return res.json({
+        ok: true,
+        x,y,w,h,
+        newCells, overlappedCells,
+        totalCents,
+        currency: CURRENCY,
+        lotRule: (requiredLotW && requiredLotH) ? { requiredLotW, requiredLotH } : null
+      });
+    } catch (err) {
+      console.error('quote_error:', err);
+      return res.status(500).json({ error: 'quote_error' });
+    }
+  });
+
+  // -------- FULFILL (après paiement) --------
+  function fulfillRectDirect({ x, y, w, h, buyerEmail, meta }) {
+    try {
+      const db = readDB();
+      const purchaseId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      for (let yy = y; yy < y + h; yy++) {
+        for (let xx = x; xx < x + w; xx++) {
+          const key = `${xx}:${yy}`;
+          const hist = db.cells[key] || [];
+          const nextPrice = computeCellPriceCents(hist);
 
           let payoutToPrevious = 0;
-          if (history.length > 0) {
-            const last = history[history.length - 1];
+          if (hist.length > 0) {
+            const last = hist[hist.length - 1];
             const wanted = Math.round(last.priceCents * FUSION_FACTOR);
             payoutToPrevious = Math.min(wanted, nextPrice);
           }
 
-          history.push({
+          hist.push({
+            purchaseId,
             ownerEmail: buyerEmail,
             priceCents: nextPrice,
             paidPreviousCents: payoutToPrevious,
             at: new Date().toISOString(),
-            lotX0: x, lotY0: y, lotW: w, lotH: h,
-            logo: logo || '', link: link || '', color: color || '', msg: msg || ''
+            lotW: w,
+            lotH: h,
+            // On ne répète pas tout le meta sur chaque case, mais on laisse une trace minimale
+            hasBanner: !!meta
           });
 
-          if (history.length > MAX_LAYERS_PER_CELL) {
-            history.splice(0, history.length - MAX_LAYERS_PER_CELL);
+          if (hist.length > MAX_LAYERS_PER_CELL) {
+            hist.splice(0, hist.length - MAX_LAYERS_PER_CELL);
           }
-
-          db.cells[key] = history;
+          db.cells[key] = hist;
         }
+      }
+
+      // On enregistre UNE entrée “placement” (pour l’affichage des logos/bannières)
+      if (meta && (meta.logo || meta.link || meta.name || meta.msg || meta.color)) {
+        db.placements.push({
+          purchaseId,
+          x, y, w, h,
+          meta: {
+            name: (meta.name || '').slice(0, 80),
+            link: (meta.link || '').slice(0, 300),
+            logo: (meta.logo || '').slice(0, 600),
+            color: (meta.color || '#1e90ff').slice(0, 20),
+            msg: (meta.msg || '').slice(0, 280)
+          },
+          at: new Date().toISOString()
+        });
       }
 
       writeDB(db);
       return { ok: true };
     } catch (err) {
       console.error('fulfillRectDirect error:', err);
-      return { ok:false, error:'fulfill_error' };
+      return { ok: false, error: 'fulfill_error' };
     }
   }
 
-  // Exposer pour server.js
+  // Exposé pour server.js
   app.locals.fulfillRectDirect = fulfillRectDirect;
-  app.locals.calcRectQuote     = calcRectQuote;
 
-  // ============== Exposition lecture cellules ==============
-  app.get('/api/cells', (req, res) => {
+  // -------- Lecture des placements (pour afficher les logos) --------
+  app.get('/api/grid', (req, res) => {
     try {
       const db = readDB();
-      res.json({ ok:true, cells: db.cells });
-    } catch {
-      res.status(500).json({ ok:false, error:'cells_error' });
+      return res.json({
+        ok: true,
+        width: GRID_W,
+        height: GRID_H,
+        placements: db.placements || []
+      });
+    } catch (err) {
+      console.error('/api/grid error:', err);
+      return res.status(500).json({ error: 'grid_error' });
     }
   });
+
+  // ✅ petite fonction interne pour calculer un devis sans HTTP (utilisée par server.js)
+  app.locals.calcRectQuote = ({ x, y, w, h, buyerEmail }) => {
+    try {
+      if ([x,y,w,h].some(v => typeof v !== 'number')) return { ok:false, error:'coords_invalides' };
+      if (!buyerEmail) return { ok:false, error:'buyerEmail_requis' };
+      if (x < 0 || y < 0 || x + w > GRID_W || y + h > GRID_H) return { ok:false, error:'hors_grille' };
+
+      const db = readDB();
+
+      let requiredLotW = null, requiredLotH = null;
+      for (let yy = y; yy < y + h; yy++) {
+        for (let xx = x; xx < x + w; xx++) {
+          const key = `${xx}:${yy}`;
+          const hist = db.cells[key];
+          if (hist && hist.length > 0) {
+            const first = hist[0];
+            if (first.lotW && first.lotH) {
+              requiredLotW = first.lotW;
+              requiredLotH = first.lotH;
+            }
+          }
+        }
+      }
+      if (requiredLotW !== null && requiredLotH !== null) {
+        if (w < requiredLotW || h < requiredLotH) {
+          return { ok:false, error:'lot_alignment_required', requiredLotW, requiredLotH };
+        }
+      }
+
+      let totalCents = 0;
+      for (let yy = y; yy < y + h; yy++) {
+        for (let xx = x; xx < x + w; xx++) {
+          const key = `${xx}:${yy}`;
+          totalCents += computeCellPriceCents(db.cells[key]);
+        }
+      }
+      return { ok:true, totalCents, currency:CURRENCY };
+    } catch (e) {
+      return { ok:false, error:'quote_error' };
+    }
+  };
 }
 
 module.exports = { attachRectRoutes };
+
 
