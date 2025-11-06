@@ -7,274 +7,436 @@
   <style>
     :root{ --cell:14px; --gap:1px; }
     html,body{ height:100% }
-    body{ margin:0; color:#fff; font-family:system-ui,Arial,sans-serif; background:#0b0c15; display:flex; flex-direction:column; }
-    header{padding:14px 18px; border-bottom:1px solid rgba(255,255,255,.08)}
-    .topbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-    .pill{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);padding:6px 10px;border-radius:999px;font-size:13px}
+    body{
+      margin:0; color:#fff; font-family:Inter,system-ui,Arial,sans-serif;
+      background:
+        radial-gradient(1400px 700px at 20% -10%, #3a2df0 0%, transparent 50%),
+        radial-gradient(1200px 600px at 90% 0%, transparent 45%),
+        #0b0c15;
+      display:flex; flex-direction:column;
+    }
+    a{color:#7bd3ff; text-decoration:none} a:hover{text-decoration:underline}
+
+    header{padding:18px 20px;background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border-bottom:1px solid rgba(255,255,255,.08);}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+    .brand{display:flex;align-items:center;gap:12px;}
+    .logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#00ffd0,#ffe171);box-shadow:0 6px 18px rgba(0,0,0,.35);}
+    .brand h1{margin:0;line-height:1;font-size:clamp(22px,3.6vw,36px);
+      background:linear-gradient(90deg,#00ffd0,#ffe08a);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+    .stats{display:flex;gap:10px;flex-wrap:wrap}
+    .pill{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);padding:6px 10px;border-radius:999px;font-size:13px;color:#dbe6ff;}
+    .countdown{color:#ffe08a;font-weight:700}
+
+    .toolbar{display:flex;gap:10px;align-items:center;padding:12px 0 4px;flex-wrap:wrap;}
     .btn{background:#171a2b;border:1px solid #2b2f4f;color:#eaf1ff;padding:9px 12px;border-radius:10px;font-size:14px;cursor:pointer;}
-    .btn.primary{background:linear-gradient(180deg,#6fd1ff,#3a86ff);color:#061026;border-color:#2b6ad7;font-weight:700}
+    .btn.primary{background:linear-gradient(180deg,#6fd1ff,#3a86ff);color:#061026;border-color:#2b6ad7;font-weight:700;box-shadow:0 8px 24px rgba(58,134,255,.35);}
     .btn:disabled{opacity:.45;cursor:not-allowed}
-    #stage{flex:1;padding:18px}
-    #gridWrap{margin:auto;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:14px; width:max(720px,92vw);height:clamp(440px,70vh,78vh); overflow:auto;position:relative;}
-    #grid{ display:grid;grid-template-columns:repeat(100,var(--cell));grid-auto-rows:var(--cell);gap:var(--gap); background:#151934;
-           width:calc(100*var(--cell) + 99*var(--gap)); height:calc(100*var(--cell) + 99*var(--gap)); position:relative; }
-    .cell{width:var(--cell);height:var(--cell);background:#2b2f55;border:1px solid #3b3f68;box-sizing:border-box;cursor:pointer}
-    .cell.sel{outline:1px solid #bcd1ff}
-    .cell.sold{background:#253050;border-color:#3d4a6b; cursor:pointer}
-    .cell.sold:hover{filter:brightness(1.08)}
+    .range{accent-color:#79f}
+
+    #stage{flex:1;padding:18px;}
+    #gridWrap{
+      margin:auto;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:14px;
+      box-shadow:0 12px 60px rgba(0,0,0,.35);
+      width:max(720px,92vw);height:clamp(440px,70vh,78vh);
+      overflow:auto;position:relative;
+    }
+    #grid{
+      display:grid;grid-template-columns:repeat(100,var(--cell));grid-auto-rows:var(--cell);gap:var(--gap);
+      background:#151934;
+      width:calc(100*var(--cell) + 99*var(--gap));
+      height:calc(100*var(--cell) + 99*var(--gap));
+      position:relative; z-index:1;
+    }
+    .cell{width:var(--cell);height:var(--cell);background:#2b2f55;border:1px solid #3b3f68;box-sizing:border-box;cursor:pointer;transition:background .12s;}
+    .cell:hover{background:#3b3f68}
+    .sel{outline:1px solid #bcd1ff;}
+    .sold{background:#1e223f;border-color:#535a87;cursor:default;}
+
+    #selectionBox{
+      position:absolute;pointer-events:none;border:2px dashed #7fb3ff;
+      background:rgba(127,179,255,.15);display:none;z-index:5;
+    }
+
+    footer{padding:14px 18px;border-top:1px solid rgba(255,255,255,.08);text-align:center;color:#bcd1ff;background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);}
+
     .modalWrap{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:10}
-    .modal{width:min(560px,92vw);background:#0f1224;border:1px solid #2a2e52;border-radius:14px;padding:16px}
+    .modal{width:min(560px,92vw);background:#0f1224;border:1px solid #2a2e52;border-radius:14px;padding:16px 16px 10px;box-shadow:0 30px 100px rgba(0,0,0,.6);}
+    .modal h3{margin:0 0 10px}
     .row{display:flex;gap:10px;margin:8px 0;flex-wrap:wrap}
-    .row label{width:140px;font-size:14px;color:#cfe}
-    .row input,.row textarea{flex:1;background:#171a35;border:1px solid #2b2f66;border-radius:8px;color:#eef;padding:8px 10px}
-    .muted{color:#9aa;font-size:13px}
-    footer{padding:10px 16px;border-top:1px solid rgba(255,255,255,.08);text-align:center;color:#bcd1ff}
+    .row label{width:140px;color:#d0d8ff;font-size:14px}
+    .row input,.row textarea{flex:1;background:#171a35;border:1px solid #2b2f66;border-radius:8px;color:#eef;padding:8px 10px;font-size:14px;}
+    .modal .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:10px}
+    .priceTag{font-weight:800;color:#9effb6}
+    .muted{color:#9aa;font-size:13px;white-space:pre-wrap}
     #errors{position:fixed;right:10px;bottom:10px;max-width:60ch;background:#2a1033;border:1px solid #723b87;border-radius:8px;padding:10px;display:none;white-space:pre-wrap}
   </style>
 </head>
 <body>
-  <header>
-    <div class="topbar">
-      <div style="display:flex;gap:10px;align-items:center">
-        <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#00ffd0,#ffe171)"></div>
-        <h2 style="margin:0">Pixel World Cup</h2>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <span class="pill">Total: <b>10 000</b></span>
-        <span class="pill">Vendues: <b id="soldCount">0</b></span>
-        <span class="pill">Disponibles: <b id="freeCount">10 000</b></span>
-      </div>
-      <div style="display:flex;gap:10px;align-items:center">
-        <button id="buyBtn" class="btn primary" disabled>Acheter mes cases</button>
-        <button id="clearSelBtn" class="btn">Désélectionner</button>
-        <label>Zoom <input id="zoom" type="range" min="10" max="24" value="14"/></label>
-      </div>
-    </div>
-  </header>
-
-  <div id="stage">
-    <div id="gridWrap">
-      <div id="grid"></div>
+<header>
+  <div class="topbar">
+    <div class="brand"><div class="logo"></div><h1>Pixel World Cup</h1></div>
+    <div class="stats">
+      <span class="pill">Total : <b>10 000</b></span>
+      <span class="pill">Vendues : <b id="soldCount">0</b></span>
+      <span class="pill">Disponibles : <b id="freeCount">10 000</b></span>
+      <span class="pill countdown">Fin : <b id="countdown">—</b></span>
+      <a class="pill" href="./about.html">Comment ça marche ?</a>
     </div>
   </div>
+  <div class="toolbar">
+    <button id="buyBtn" class="btn primary" disabled>Acheter mes cases</button>
+    <button id="clearSelBtn" class="btn">Désélectionner</button>
+    <label>Zoom <input id="zoom" class="range" type="range" min="10" max="24" step="1" value="14"/></label>
+  </div>
+</header>
 
-  <footer>© 2025 Pixel World Cup</footer>
+<div id="stage">
+  <div id="gridWrap">
+    <div id="grid"></div>
+    <div id="selectionBox"></div>
+  </div>
+</div>
 
-  <!-- Modal -->
-  <div id="modalWrap" class="modalWrap">
-    <div class="modal">
-      <h3>Finaliser l’achat</h3>
-      <div class="row"><label>Votre nom</label><input id="mName" placeholder="Nom public"/></div>
-      <div class="row"><label>Email</label><input id="mEmail" type="email" placeholder="ton.email@example.com"/></div>
-      <div class="row"><label>URL</label><input id="mLink" placeholder="[https://votre-site.com"/></div]https://votre-site.com"/></div>
-      <div class="row"><label>Couleur</label><input id="mColor" type="color" value="#1e90ff"/></div>
-      <div class="row"><label>Logo</label><input id="mLogo" placeholder="https://…/logo.png"/></div>
-      <div class="row"><label>Message</label><textarea id="mMsg" rows="2"></textarea></div>
-      <div class="muted">Cases sélectionnées : <b id="selCount">0</b> — Total indicatif : <b id="totalPrice">0 €</b></div>
-      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
-        <button id="cancelBuy" class="btn">Annuler</button>
-        <button id="confirmStripe" class="btn primary">Confirmer & Payer</button>
-      </div>
+<footer>©️ 2025 Pixel World Cup — Démo locale.</footer>
+
+<!-- Modal -->
+<div id="modalWrap" class="modalWrap">
+  <div class="modal">
+    <h3>Finaliser l’achat</h3>
+    <div class="row"><label>Votre nom</label><input id="mName" placeholder="Nom affiché publiquement"/></div>
+    <div class="row"><label>Email</label><input id="mEmail" type="email" placeholder="ton.email@example.com"/></div>
+    <div class="row"><label>URL</label><input id="mLink" placeholder="[https://exemple.com"/></div]https://exemple.com"/></div>
+    <div class="row"><label>Couleur</label><input id="mColor" type="color" value="#1e90ff"/></div>
+    <div class="row"><label>Logo</label><input id="mLogo" placeholder="https://…/logo.png"/></div>
+    <div class="row"><label>Message</label><textarea id="mMsg" rows="2" placeholder="Petit message optionnel…"></textarea></div>
+    <div class="muted">Cases sélectionnées : <b id="selCount">0</b> — Total indicatif : <span class="priceTag" id="totalPrice">0 €</span></div>
+    <div class="actions">
+      <button id="cancelBuy" class="btn">Annuler</button>
+      <button id="confirmStripe" class="btn primary">Confirmer & Payer</button>
     </div>
   </div>
+</div>
 
-  <div id="errors"></div>
+<div id="errors"></div>
 
-  <script>
-  // petit catcher d'erreurs
-  (function(){
-    const box = document.getElementById('errors');
-    window.addEventListener('error', (e)=>{ box.style.display='block'; box.textContent='Erreur: '+(e.error?.message||e.message) });
-    window.addEventListener('unhandledrejection', (e)=>{ box.style.display='block'; box.textContent='Rejet: '+(e.reason?.message||e.reason) });
+<script>
+/* Affichage erreurs runtime */
+(function(){
+  const box = document.getElementById('errors');
+  window.addEventListener('error', (e)=>{
+    box.style.display='block'; box.textContent = 'Erreur : ' + (e.error?.message || e.message || e.filename);
+  });
+  window.addEventListener('unhandledrejection', (e)=>{
+    box.style.display='block'; box.textContent = 'Promise rejetée : ' + (e.reason?.message || e.reason || '');
+  });
+})();
+
+document.addEventListener("DOMContentLoaded", () => {
+  const UI_CELL_PRICE_EUR = 100; // affichage indicatif
+  const COLS=100, ROWS=100, TOTAL=COLS*ROWS;
+  const DEADLINE=new Date('2025-12-31T23:59:59+01:00');
+
+  const grid=document.getElementById('grid'),
+        gridWrap=document.getElementById('gridWrap'),
+        box=document.getElementById('selectionBox'),
+        buyBtn=document.getElementById('buyBtn'),
+        clearBtn=document.getElementById('clearSelBtn'),
+        zoom=document.getElementById('zoom'),
+        soldEl=document.getElementById('soldCount'),
+        freeEl=document.getElementById('freeCount'),
+        countdownEl=document.getElementById('countdown'),
+        modalWrap=document.getElementById('modalWrap'),
+        mEmail=document.getElementById('mEmail'),
+        selCountEl=document.getElementById('selCount'),
+        totalPriceEl=document.getElementById('totalPrice');
+
+  const selection = new Set(); // "x:y"
+  const cells = {}; // placeholder
+  let LAST_GRID_DATA = null;
+
+  const fmtEUR = c => (Number(c||0)).toLocaleString('fr-FR',{style:'currency',currency:'EUR'});
+  const stepPx = () => {
+    const cell = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell'))||14;
+    const gap  = parseInt(getComputedStyle(grid).gap)||1;
+    return cell + gap;
+  };
+  const idAtClientPoint = (clientX, clientY) => {
+    const rect = grid.getBoundingClientRect();
+    const s = stepPx();
+    const x = Math.floor((clientX - rect.left) / s);
+    const y = Math.floor((clientY - rect.top)  / s);
+    if (x<0 || y<0 || x>=COLS || y>=ROWS) return null;
+    return `${x}:${y}`;
+  };
+
+  /* Grille */
+  (function buildGrid(){
+    const frag=document.createDocumentFragment();
+    for(let y=0;y<ROWS;y++){
+      for(let x=0;x<COLS;x++){
+        const d=document.createElement('div');
+        d.className='cell';
+        d.dataset.x=x; d.dataset.y=y;
+        frag.appendChild(d);
+      }
+    }
+    grid.appendChild(frag);
   })();
 
-  document.addEventListener('DOMContentLoaded', () => {
-    const UI_CELL_PRICE_EUR = 100;
-    const COLS = 100, ROWS = 100, TOTAL = COLS*ROWS;
-
-    const grid = document.getElementById('grid');
-    const gridWrap = document.getElementById('gridWrap');
-    const buyBtn = document.getElementById('buyBtn');
-    const clearBtn = document.getElementById('clearSelBtn');
-    const soldEl = document.getElementById('soldCount');
-    const freeEl = document.getElementById('freeCount');
-    const selCountEl = document.getElementById('selCount');
-    const totalPriceEl = document.getElementById('totalPrice');
-
-    const modalWrap = document.getElementById('modalWrap');
-    const mName = document.getElementById('mName');
-    const mEmail = document.getElementById('mEmail');
-    const mLink = document.getElementById('mLink');
-    const mLogo = document.getElementById('mLogo');
-    const mColor = document.getElementById('mColor');
-    const mMsg = document.getElementById('mMsg');
-
-    const selection = new Set();
-    const cells = {}; // clé -> {sold, link, logo, color}
-
-    const API_BASE = window.location.origin;
-
-    function step(){
-      const cs = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell'))||14;
-      const gap =  parseInt(getComputedStyle(grid).gap)||1;
-      return cs + gap;
+  /* clic simple multi-sélection (ALT = remplace) */
+  grid.addEventListener('click', (e)=>{
+    const cell = e.target.closest('.cell');
+    if(!cell) return;
+    if (cell.classList.contains('sold')) {
+      // vendu → ne pas re-sélectionner
+      return;
     }
+    const id = `${cell.dataset.x}:${cell.dataset.y}`;
 
-    function buildGrid(){
-      const frag = document.createDocumentFragment();
-      for(let y=0;y<ROWS;y++){
-        for(let x=0;x<COLS;x++){
-          const d=document.createElement('div');
-          d.className='cell';
-          d.dataset.x=x; d.dataset.y=y;
-          frag.appendChild(d);
-        }
-      }
-      grid.appendChild(frag);
-    }
-
-    function markSoldFromDB(db){
-      Object.keys(db.cells||{}).forEach(key=>{
-        const h = db.cells[key];
-        if(!h || h.length===0) return;
-        const last = h[h.length-1];
-        const el = grid.querySelector(`.cell[data-x="${key.split(':')[0]}"][data-y="${key.split(':')[1]}"]`);
-        if(!el) return;
-        el.classList.add('sold');
-        el.style.backgroundImage = last.logo ? `url("${last.logo}")` : '';
-        el.style.backgroundSize = 'cover';
-        el.style.backgroundPosition = 'center';
-        cells[key] = { sold:true, link:last.link||null, logo:last.logo||null, color:last.color||null };
-      });
-      const sold = Object.keys(cells).length;
-      soldEl.textContent = sold.toLocaleString('fr-FR');
-      freeEl.textContent = (TOTAL - sold).toLocaleString('fr-FR');
-    }
-
-    async function loadDBAndPaint(){
-      try{
-        const r = await fetch('/data/db.json', { cache:'no-store' });
-        const db = await r.json();
-        markSoldFromDB(db);
-      }catch(e){ console.warn('no db yet'); }
-    }
-
-    function updateUI(){
-      const qty = selection.size;
-      selCountEl.textContent = qty;
-      // devis live côté serveur (affiche bien le double si recouvrement)
-      (async ()=>{
-        if(qty===0){ totalPriceEl.textContent = (0).toLocaleString('fr-FR',{style:'currency',currency:'EUR'}); buyBtn.disabled=true; return; }
-        let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
-        for(const id of selection){
-          const [x,y]=id.split(':').map(Number);
-          minX=Math.min(minX,x); minY=Math.min(minY,y);
-          maxX=Math.max(maxX,x); maxY=Math.max(maxY,y);
-        }
-        const body = { x:minX, y:minY, w:maxX-minX+1, h:maxY-minY+1, buyerEmail: (mEmail.value||'demo@test.com') };
-        const q = await postJSON(`${API_BASE}/api/purchase-rect/quote`, body);
-        if(q.ok && q.data){
-          totalPriceEl.textContent = (q.data.totalCents/100).toLocaleString('fr-FR',{style:'currency',currency:'EUR'});
-          buyBtn.disabled = false;
-        }else{
-          buyBtn.disabled = true;
-        }
-      })();
-    }
-
-    function toggleSelect(el){
-      const id = `${el.dataset.x}:${el.dataset.y}`;
-      if(el.classList.contains('sold')){
-        // clic sur case vendue -> si lien dispo, on ouvre
-        const info = cells[id];
-        if(info?.link) window.open(info.link, '_blank');
-        return;
-      }
-      if(selection.has(id)){ selection.delete(id); el.classList.remove('sel'); }
-      else { selection.add(id); el.classList.add('sel'); }
-      updateUI();
-    }
-
-    grid.addEventListener('click',(e)=>{
-      const cell = e.target.closest('.cell');
-      if(!cell) return;
-      toggleSelect(cell);
-    });
-
-    clearBtn.addEventListener('click', ()=>{
+    if (e.altKey) {
       selection.clear();
       grid.querySelectorAll('.cell.sel').forEach(n=>n.classList.remove('sel'));
-      updateUI();
-    });
-
-    document.getElementById('zoom').addEventListener('input', (e)=>{
-      document.documentElement.style.setProperty('--cell', e.target.value+'px');
-    });
-
-    function postJSON(url, body){
-      return fetch(url,{
-        method:'POST',
-        headers:{'content-type':'application/json'},
-        body: JSON.stringify(body)
-      }).then(r=>r.json().then(d=>({ok:r.ok,data:d})).catch(()=>({ok:r.ok,data:{}})));
     }
 
-    // bouton Acheter
-    document.getElementById('buyBtn').addEventListener('click', ()=>{
-      if(selection.size===0) return;
-      modalWrap.style.display='flex';
-    });
-    document.getElementById('cancelBuy').addEventListener('click', ()=> modalWrap.style.display='none');
-
-    document.getElementById('confirmStripe').addEventListener('click', onConfirmStripe);
-
-    async function onConfirmStripe(){
-      try{
-        if(selection.size===0){ alert('Sélectionne des cases.'); return; }
-        const buyerEmail = (mEmail.value||'').trim();
-        if(!buyerEmail){ alert('Mets ton email.'); return; }
-
-        // rectangle englobant
-        let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
-        for(const id of selection){
-          const [x,y]=id.split(':').map(Number);
-          minX=Math.min(minX,x); minY=Math.min(minY,y);
-          maxX=Math.max(maxX,x); maxY=Math.max(maxY,y);
-        }
-        const x=minX, y=minY, w=maxX-minX+1, h=maxY-minY+1;
-
-        // checkout (on envoie aussi meta pour le webhook)
-        const r = await postJSON(`${API_BASE}/api/purchase-rect/checkout`, {
-          x,y,w,h,
-          buyerEmail,
-          name: (mName.value||'').trim(),
-          link: (mLink.value||'').trim(),
-          logo: (mLogo.value||'').trim(),
-          color: (mColor.value||'').trim(),
-          message: (mMsg.value||'').trim()
-        });
-        if(!r.ok || !r.data?.url){
-          alert(r.data?.error || 'Erreur paiement');
-          return;
-        }
-
-        // clear sélection avant la redirection
-        selection.clear();
-        grid.querySelectorAll('.cell.sel').forEach(n=>n.classList.remove('sel'));
-
-        window.location.href = r.data.url;
-      }catch(e){
-        console.error(e);
-        alert('Erreur : '+(e.message||e));
-      }
-    }
-
-    // go
-    buildGrid();
-    loadDBAndPaint();
+    if (selection.has(id)) { selection.delete(id); cell.classList.remove('sel'); }
+    else { selection.add(id); cell.classList.add('sel'); }
     updateUI();
   });
-  </script>
+
+  /* Lasso */
+  let dragging=false, startId=null;
+  gridWrap.addEventListener('mousedown',(e)=>{
+    const id = idAtClientPoint(e.clientX, e.clientY);
+    if (!id) return;
+    dragging = true; startId = id;
+
+    if (e.altKey) {
+      selection.clear();
+      grid.querySelectorAll('.cell.sel').forEach(n=>n.classList.remove('sel'));
+    }
+
+    const s = stepPx();
+    const [sx, sy] = startId.split(':').map(Number);
+    box.style.display='block';
+    box.style.left  = (sx * s) + 'px';
+    box.style.top   = (sy * s) + 'px';
+    box.style.width = s + 'px';
+    box.style.height= s + 'px';
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove',(e)=>{
+    if(!dragging) return;
+    const curId = idAtClientPoint(e.clientX, e.clientY);
+    if(!curId) return;
+
+    const s = stepPx();
+    const [sx, sy] = startId.split(':').map(Number);
+    const [cx, cy] = curId.split(':').map(Number);
+    const x1 = Math.min(sx, cx), x2 = Math.max(sx, cx);
+    const y1 = Math.min(sy, cy), y2 = Math.max(sy, cy);
+
+    box.style.display='block';
+    box.style.left   = (x1 * s) + 'px';
+    box.style.top    = (y1 * s) + 'px';
+    box.style.width  = ((x2 - x1 + 1) * s - (parseInt(getComputedStyle(grid).gap)||1)) + 'px';
+    box.style.height = ((y2 - y1 + 1) * s - (parseInt(getComputedStyle(grid).gap)||1)) + 'px';
+
+    for(let y=y1;y<=y2;y++){
+      for(let x=x1;x<=x2;x++){
+        const id = `${x}:${y}`;
+        if(!selection.has(id)){
+          selection.add(id);
+          const node = grid.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+          if (node && !node.classList.contains('sold')) node.classList.add('sel');
+        }
+      }
+    }
+    updateUI();
+  });
+
+  window.addEventListener('mouseup',()=>{
+    if(!dragging) return;
+    dragging=false; startId=null;
+    box.style.display='none';
+  });
+
+  function updateUI(){
+    const sold = (LAST_GRID_DATA && LAST_GRID_DATA.cells) ? Object.keys(LAST_GRID_DATA.cells).length : 0;
+    soldEl.textContent = sold.toLocaleString('fr-FR');
+    freeEl.textContent = (TOTAL - sold).toLocaleString('fr-FR');
+
+    const qty = selection.size;
+    selCountEl.textContent = qty;
+    totalPriceEl.textContent = fmtEUR(qty * UI_CELL_PRICE_EUR);
+    buyBtn.disabled = qty === 0 || new Date()>=DEADLINE;
+  }
+
+  /* Modale + countdown + clear */
+  buyBtn.addEventListener('click', ()=>{
+    if(selection.size===0) return;
+    if(new Date()>=DEADLINE){ alert('Compétition terminée.'); return; }
+    modalWrap.style.display='flex';
+  });
+  document.getElementById('cancelBuy').addEventListener('click', ()=> modalWrap.style.display='none');
+
+  (function tick(){
+    const ms = DEADLINE - new Date();
+    if(ms<=0){ countdownEl.textContent='Terminé'; buyBtn.disabled=true; return; }
+    const s=Math.floor(ms/1000), d=Math.floor(s/86400), h=Math.floor((s%86400)/3600), m=Math.floor((s%3600)/60), sec=s%60;
+    countdownEl.textContent = `${d}j ${h}h ${m}m ${sec}s`;
+    setTimeout(tick, 1000);
+  })();
+
+  clearBtn.addEventListener('click', ()=>{
+    selection.clear();
+    grid.querySelectorAll('.cell.sel').forEach(n=>n.classList.remove('sel'));
+    updateUI();
+  });
+
+  /* === API === */
+  const API_BASE = window.location.origin;
+
+  async function postJSON(url, body){
+    const r = await fetch(url, { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body) });
+    const data = await r.json().catch(()=> ({}));
+    return { ok:r.ok, data };
+  }
+
+  async function loadGridState(){
+    try{
+      const r = await fetch(`${API_BASE}/api/cells`);
+      const data = await r.json();
+      if (data && data.ok) renderSoldAndLogos(data);
+      updateUI();
+    }catch(e){ console.warn('loadGridState error', e); }
+  }
+
+  function renderSoldAndLogos(data){
+    LAST_GRID_DATA = data;
+    const wrap = document.getElementById('gridWrap');
+    const s = stepPx();
+
+    // retirer ancien calque
+    let art = document.getElementById('artLayer');
+    if (art) art.remove();
+    art = document.createElement('div');
+    art.id = 'artLayer';
+    art.style.position='absolute';
+    art.style.inset='0';
+    art.style.pointerEvents='none';
+    wrap.appendChild(art);
+
+    // marquer vendues
+    grid.querySelectorAll('.cell.sold').forEach(n=>n.classList.remove('sold'));
+    for (const key of Object.keys(data.cells||{})) {
+      const [cx,cy] = key.split(':').map(Number);
+      const n = grid.querySelector(`.cell[data-x="${cx}"][data-y="${cy}"]`);
+      if (n) n.classList.add('sold');
+    }
+
+    // une image par lot (lotOriginX/Y)
+    for (const key of Object.keys(data.cells||{})) {
+      const info = data.cells[key];
+      const [cx,cy] = key.split(':').map(Number);
+      if (info.lotOriginX === cx && info.lotOriginY === cy) {
+        const left = info.lotOriginX * s;
+        const top  = info.lotOriginY * s;
+        const wpx  = info.lotW * s - (parseInt(getComputedStyle(grid).gap)||1);
+        const hpx  = info.lotH * s - (parseInt(getComputedStyle(grid).gap)||1);
+
+        const box = document.createElement('a');
+        box.href = info.link || '#';
+        box.target = '_blank';
+        box.style.position='absolute';
+        box.style.left = left+'px';
+        box.style.top  = top+'px';
+        box.style.width  = wpx+'px';
+        box.style.height = hpx+'px';
+        box.style.outline = '2px solid #17ffd5';
+        box.style.borderRadius='2px';
+        box.style.pointerEvents='auto';
+        box.title = info.name || '';
+
+        if (info.logo) {
+          const img = document.createElement('img');
+          img.src = info.logo;
+          img.alt = info.name || '';
+          img.style.width='100%';
+          img.style.height='100%';
+          img.style.objectFit='contain';
+          img.style.display='block';
+          box.appendChild(img);
+        } else {
+          box.style.background = info.color || '#1e90ff';
+        }
+        art.appendChild(box);
+      }
+    }
+  }
+
+  // zoom → re-render overlays
+  zoom.addEventListener('input', e=>{
+    document.documentElement.style.setProperty('--cell', e.target.value+'px');
+    if (LAST_GRID_DATA) renderSoldAndLogos(LAST_GRID_DATA);
+  });
+
+  // attach confirm handler
+  (function(){
+    const btn = document.getElementById('confirmStripe');
+    if (!btn){ console.error('⚠️ #confirmStripe introuvable'); return; }
+    btn.addEventListener('click', onConfirmStripe);
+  })();
+
+  async function onConfirmStripe(){
+    try{
+      if (selection.size===0){ alert('Sélectionne des cases.'); return; }
+      const buyerEmail=(mEmail.value||'').trim();
+      if(!buyerEmail){ alert('Mets ton email.'); return; }
+
+      // rectangle englobant
+      let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+      for(const id of selection){
+        const [x,y]=id.split(':').map(Number);
+        minX=Math.min(minX,x); minY=Math.min(minY,y);
+        maxX=Math.max(maxX,x); maxY=Math.max(maxY,y);
+      }
+      const x=minX, y=minY, w=maxX-minX+1, h=maxY-minY+1;
+
+      // métadonnées d’affichage
+      const name  = (document.getElementById('mName').value||'').trim();
+      const link  = (document.getElementById('mLink').value||'').trim();
+      const logo  = (document.getElementById('mLogo').value||'').trim();
+      const color = (document.getElementById('mColor').value||'#1e90ff').trim();
+      const msg   = (document.getElementById('mMsg').value||'').trim();
+
+      const body = { x,y,w,h,buyerEmail, name, link, logo, color, msg };
+
+      // 1) devis
+      const quote = await postJSON(`${API_BASE}/api/purchase-rect/quote`, body);
+      if(!quote.ok){
+        console.error(quote.data);
+        alert(quote.data?.error || 'Devis refusé');
+        return;
+      }
+
+      // 2) checkout
+      const r = await postJSON(`${API_BASE}/api/purchase-rect/checkout`, body);
+      if(!r.ok || !r.data?.ok){
+        console.error(r.data);
+        alert(r.data?.error || 'Erreur paiement');
+        return;
+      }
+
+      window.location.href = r.data.url; // → Stripe
+    } catch(e){
+      console.error(e); alert('Erreur : ' + (e.message||e));
+    }
+  }
+
+  // premier chargement
+  loadGridState();
+});
+</script>
 </body>
 </html>
-
