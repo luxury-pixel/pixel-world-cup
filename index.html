@@ -1,306 +1,492 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
- <meta charset="UTF-8"/>
- <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
- <title>Pixel World Cup — 10 000 cases</title>
- <style>
-   :root{ --cell:14px; --gap:1px; }
-   html,body{ height:100% }
-   body{
-     margin:0; color:#fff; font-family:Inter,system-ui,Arial,sans-serif;
-     background:
-       radial-gradient(1400px 700px at 20% -10%, #3a2df0 0%, transparent 50%),
-       radial-gradient(1200px 600px at 90% 0%, transparent 45%),
-       #0b0c15;
-     display:flex; flex-direction:column;
-   }
-   a{color:#7bd3ff; text-decoration:none} a:hover{text-decoration:underline}
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pixel World Cup — 10 000 cases</title>
+  <style>
+    :root{ --cell:14px; --gap:1px; }
+    html,body{ height:100% }
+    body{
+      margin:0; color:#fff; font-family:Inter,system-ui,Arial,sans-serif;
+      background:
+        radial-gradient(1400px 700px at 20% -10%, #3a2df0 0%, transparent 50%),
+        radial-gradient(1200px 600px at 90% 0%, transparent 45%),
+        #0b0c15;
+      display:flex; flex-direction:column;
+    }
+    a{color:#7bd3ff; text-decoration:none} a:hover{text-decoration:underline}
 
-   header{padding:18px 20px;background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border-bottom:1px solid rgba(255,255,255,.08);}
-   .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
-   .brand{display:flex;align-items:center;gap:12px;}
-   .logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#00ffd0,#ffe171);box-shadow:0 6px 18px rgba(0,0,0,.35);}
-   .brand h1{margin:0;line-height:1;font-size:clamp(22px,3.6vw,36px);
-     background:linear-gradient(90deg,#00ffd0,#ffe08a);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
-   .stats{display:flex;gap:10px;flex-wrap:wrap}
-   .pill{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);padding:6px 10px;border-radius:999px;font-size:13px;color:#dbe6ff;}
-   .countdown{color:#ffe08a;font-weight:700}
+    header{padding:18px 20px;background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border-bottom:1px solid rgba(255,255,255,.08);}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+    .brand{display:flex;align-items:center;gap:12px;}
+    .logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#00ffd0,#ffe171);box-shadow:0 6px 18px rgba(0,0,0,.35);}
+    .brand h1{margin:0;line-height:1;font-size:clamp(22px,3.6vw,36px);
+      background:linear-gradient(90deg,#00ffd0,#ffe08a);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+    .stats{display:flex;gap:10px;flex-wrap:wrap}
+    .pill{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);padding:6px 10px;border-radius:999px;font-size:13px;color:#dbe6ff;}
+    .countdown{color:#ffe08a;font-weight:700}
 
-   .toolbar{display:flex;gap:10px;align-items:center;padding:12px 0 4px;flex-wrap:wrap;}
-   .btn{background:#171a2b;border:1px solid #2b2f4f;color:#eaf1ff;padding:9px 12px;border-radius:10px;font-size:14px;cursor:pointer;}
-   .btn.primary{background:linear-gradient(180deg,#6fd1ff,#3a86ff);color:#061026;border-color:#2b6ad7;font-weight:700;box-shadow:0 8px 24px rgba(58,134,255,.35);}
-   .btn:disabled{opacity:.45;cursor:not-allowed}
-   .range{accent-color:#79f}
+    .toolbar{display:flex;gap:10px;align-items:center;padding:12px 0 4px;flex-wrap:wrap;}
+    .btn{background:#171a2b;border:1px solid #2b2f4f;color:#eaf1ff;padding:9px 12px;border-radius:10px;font-size:14px;cursor:pointer;}
+    .btn.primary{background:linear-gradient(180deg,#6fd1ff,#3a86ff);color:#061026;border-color:#2b6ad7;font-weight:700;box-shadow:0 8px 24px rgba(58,134,255,.35);}
+    .btn:disabled{opacity:.45;cursor:not-allowed}
+    .range{accent-color:#79f}
 
-   #stage{flex:1;padding:18px;}
-   #gridWrap{
-     margin:auto;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:14px;
-     box-shadow:0 12px 60px rgba(0,0,0,.35);
-     width:max(720px,92vw);height:clamp(440px,70vh,78vh);
-     overflow:auto;position:relative;
-   }
-   #grid{
-     display:grid;grid-template-columns:repeat(100,var(--cell));grid-auto-rows:var(--cell);gap:var(--gap);
-     background:#151934;
-     width:calc(100*var(--cell) + 99*var(--gap));
-     height:calc(100*var(--cell) + 99*var(--gap));
-     position:relative; z-index:1;
-   }
-   .cell{width:var(--cell);height:var(--cell);background:#2b2f55;border:1px solid #3b3f68;box-sizing:border-box;cursor:pointer;transition:background .12s;}
-   .cell:hover{background:#3b3f68}
-   .sel{outline:1px solid #bcd1ff;}
-   .sold{background:#1e223f;border-color:#535a87;}
+    #stage{flex:1;padding:18px;}
+    #gridWrap{
+      margin:auto;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:14px;
+      box-shadow:0 12px 60px rgba(0,0,0,.35);
+      width:max(720px,92vw);height:clamp(440px,70vh,78vh);
+      overflow:auto;position:relative;
+    }
+    #grid{
+      display:grid;grid-template-columns:repeat(100,var(--cell));grid-auto-rows:var(--cell);gap:var(--gap);
+      background:#151934;
+      width:calc(100*var(--cell) + 99*var(--gap));
+      height:calc(100*var(--cell) + 99*var(--gap));
+      position:relative; z-index:1;
+    }
+    .cell{width:var(--cell);height:var(--cell);background:#2b2f55;border:1px solid #3b3f68;box-sizing:border-box;cursor:pointer;transition:background .12s;}
+    .cell:hover{background:#3b3f68}
+    .sel{outline:1px solid #bcd1ff;}
+    .sold{background:#1e223f;border-color:#535a87;}
 
-   #selectionBox{
-     position:absolute;pointer-events:none;border:2px dashed #7fb3ff;
-     background:rgba(127,179,255,.15);display:none;z-index:5;
-   }
+    #selectionBox{
+      position:absolute;pointer-events:none;border:2px dashed #7fb3ff;
+      background:rgba(127,179,255,.15);display:none;z-index:5;
+    }
 
-   footer{padding:14px 18px;border-top:1px solid rgba(255,255,255,.08);text-align:center;color:#bcd1ff;background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);}
+    footer{padding:14px 18px;border-top:1px solid rgba(255,255,255,.08);text-align:center;color:#bcd1ff;background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);}
 
-   .modalWrap{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:10}
-   .modal{width:min(560px,92vw);background:#0f1224;border:1px solid #2a2e52;border-radius:14px;padding:16px 16px 10px;box-shadow:0 30px 100px rgba(0,0,0,.6);}
-   .modal h3{margin:0 0 10px}
-   .row{display:flex;gap:10px;margin:8px 0;flex-wrap:wrap}
-   .row label{width:140px;color:#d0d8ff;font-size:14px}
-   .row input,.row textarea{flex:1;background:#171a35;border:1px solid #2b2f66;border-radius:8px;color:#eef;padding:8px 10px;font-size:14px;}
-   .modal .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:10px}
-   .priceTag{font-weight:800;color:#9effb6}
-   .muted{color:#9aa;font-size:13px;white-space:pre-wrap}
-   #errors{position:fixed;right:10px;bottom:10px;max-width:60ch;background:#2a1033;border:1px solid #723b87;border-radius:8px;padding:10px;display:none;white-space:pre-wrap}
- </style>
+    .modalWrap{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:10}
+    .modal{width:min(560px,92vw);background:#0f1224;border:1px solid #2a2e52;border-radius:14px;padding:16px 16px 10px;box-shadow:0 30px 100px rgba(0,0,0,.6);}
+    .modal h3{margin:0 0 10px}
+    .row{display:flex;gap:10px;margin:8px 0;flex-wrap:wrap}
+    .row label{width:140px;color:#d0d8ff;font-size:14px}
+    .row input,.row textarea{flex:1;background:#171a35;border:1px solid #2b2f66;border-radius:8px;color:#eef;padding:8px 10px;font-size:14px;}
+    .modal .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:10px}
+    .priceTag{font-weight:800;color:#9effb6}
+    .muted{color:#9aa;font-size:13px;white-space:pre-wrap}
+    #errors{position:fixed;right:10px;bottom:10px;max-width:60ch;background:#2a1033;border:1px solid #723b87;border-radius:8px;padding:10px;display:none;white-space:pre-wrap}
+  </style>
 </head>
 <body>
 <header>
- <div class="topbar">
-   <div class="brand"><div class="logo"></div><h1>Pixel World Cup</h1></div>
-   <div class="stats">
-     <span class="pill">Total : <b>10 000</b></span>
-     <span class="pill">Vendues : <b id="soldCount">0</b></span>
-     <span class="pill">Disponibles : <b id="freeCount">10 000</b></span>
-     <span class="pill countdown">Fin : <b id="countdown">—</b></span>
-     <a class="pill" href="./about.html">Comment ça marche ?</a>
-   </div>
- </div>
- <div class="toolbar">
-   <button id="buyBtn" class="btn primary" disabled>Acheter mes cases</button>
-   <button id="clearSelBtn" class="btn">Désélectionner</button>
-   <label>Zoom <input id="zoom" class="range" type="range" min="10" max="24" step="1" value="14"/></label>
- </div>
+  <div class="topbar">
+    <div class="brand"><div class="logo"></div><h1>Pixel World Cup</h1></div>
+    <div class="stats">
+      <span class="pill">Total : <b>10 000</b></span>
+      <span class="pill">Vendues : <b id="soldCount">0</b></span>
+      <span class="pill">Disponibles : <b id="freeCount">10 000</b></span>
+      <span class="pill countdown">Fin : <b id="countdown">—</b></span>
+      <a class="pill" href="./about.html">Comment ça marche ?</a>
+    </div>
+  </div>
+  <div class="toolbar">
+    <button id="buyBtn" class="btn primary" disabled>Acheter mes cases</button>
+    <button id="clearSelBtn" class="btn">Désélectionner</button>
+    <label>Zoom <input id="zoom" class="range" type="range" min="10" max="24" step="1" value="14"/></label>
+  </div>
 </header>
 
 <div id="stage">
- <div id="gridWrap">
-   <div id="grid"></div>
-   <div id="selectionBox"></div>
- </div>
+  <div id="gridWrap">
+    <div id="grid"></div>
+    <div id="selectionBox"></div>
+  </div>
 </div>
 
 <footer>©️ 2025 Pixel World Cup.</footer>
 
 <!-- Modal -->
 <div id="modalWrap" class="modalWrap">
- <div class="modal">
-   <h3>Finaliser l’achat</h3>
-   <div class="row"><label>Votre nom</label><input id="mName" placeholder="Nom affiché publiquement"/></div>
-   <div class="row"><label>Email</label><input id="mEmail" type="email" placeholder="ton.email@example.com"/></div>
-   <div class="row"><label>URL</label><input id="mLink" placeholder="[https://exemple.com"/></div]https://exemple.com"/></div>
-   <div class="row"><label>Couleur</label><input id="mColor" type="color" value="#1e90ff"/></div>
-   <div class="row"><label>Logo</label><input id="mLogo" placeholder="https://…/logo.png"/></div>
-   <div class="row"><label>Message</label><textarea id="mMsg" rows="2" placeholder="Petit message optionnel…"></textarea></div>
-   <div class="muted">
-     Cases sélectionnées : <b id="selCount">0</b> — Total indicatif : <span class="priceTag" id="totalPrice">0 €</span>
-     <div id="lotRule" class="muted"></div>
-   </div>
-   <div class="actions">
-     <button id="cancelBuy" class="btn">Annuler</button>
-     <button id="confirmStripe" class="btn primary" disabled>Confirmer & Payer</button>
-   </div>
- </div>
+  <div class="modal">
+    <h3>Finaliser l’achat</h3>
+    <div class="row"><label>Votre nom</label><input id="mName" placeholder="Nom affiché publiquement"/></div>
+    <div class="row"><label>Email</label><input id="mEmail" type="email" placeholder="ton.email@example.com"/></div>
+    <div class="row"><label>URL</label><input id="mLink" placeholder="[https://exemple.com"/></div]https://exemple.com"/></div>
+    <div class="row"><label>Couleur</label><input id="mColor" type="color" value="#1e90ff"/></div>
+    <div class="row"><label>Logo</label><input id="mLogo" placeholder="https://…/logo.png"/></div>
+    <div class="row"><label>Message</label><textarea id="mMsg" rows="2" placeholder="Petit message optionnel…"></textarea></div>
+    <div class="muted">
+      Cases sélectionnées : <b id="selCount">0</b> — Total indicatif : <span class="priceTag" id="totalPrice">0 €</span>
+      <div id="lotRule" class="muted"></div>
+    </div>
+    <div class="actions">
+      <button id="cancelBuy" class="btn">Annuler</button>
+      <button id="confirmStripe" class="btn primary" disabled>Confirmer & Payer</button>
+    </div>
+  </div>
 </div>
 
 <div id="errors"></div>
 
 <script>
-/* Gestion erreurs */
+/* Affichage erreurs runtime */
 (function(){
- const box = document.getElementById('errors');
- window.addEventListener('error', (e)=>{
-   box.style.display='block'; box.textContent = 'Erreur : ' + (e.error?.message || e.message);
- });
- window.addEventListener('unhandledrejection', (e)=>{
-   box.style.display='block'; box.textContent = 'Promise rejetée : ' + (e.reason?.message || e.reason);
- });
+  const box = document.getElementById('errors');
+  window.addEventListener('error', (e)=>{
+    box.style.display='block'; box.textContent = 'Erreur : ' + (e.error?.message || e.message || e.filename);
+  });
+  window.addEventListener('unhandledrejection', (e)=>{
+    box.style.display='block'; box.textContent = 'Promise rejetée : ' + (e.reason?.message || e.reason || '');
+  });
 })();
 
 document.addEventListener("DOMContentLoaded", () => {
- const COLS=100, ROWS=100, TOTAL=COLS*ROWS;
- const DEADLINE=new Date('2025-12-31T23:59:59+01:00');
+  const COLS=100, ROWS=100, TOTAL=COLS*ROWS;
+  const DEADLINE=new Date('2025-12-31T23:59:59+01:00');
 
- const grid=document.getElementById('grid'),
-       gridWrap=document.getElementById('gridWrap'),
-       box=document.getElementById('selectionBox'),
-       buyBtn=document.getElementById('buyBtn'),
-       clearBtn=document.getElementById('clearSelBtn'),
-       zoom=document.getElementById('zoom'),
-       soldEl=document.getElementById('soldCount'),
-       freeEl=document.getElementById('freeCount'),
-       countdownEl=document.getElementById('countdown'),
-       modalWrap=document.getElementById('modalWrap'),
-       mEmail=document.getElementById('mEmail'),
-       selCountEl=document.getElementById('selCount'),
-       totalPriceEl=document.getElementById('totalPrice'),
-       lotRuleEl=document.getElementById('lotRule'),
-       confirmBtn=document.getElementById('confirmStripe');
+  const grid=document.getElementById('grid'),
+        gridWrap=document.getElementById('gridWrap'),
+        box=document.getElementById('selectionBox'),
+        buyBtn=document.getElementById('buyBtn'),
+        clearBtn=document.getElementById('clearSelBtn'),
+        zoom=document.getElementById('zoom'),
+        soldEl=document.getElementById('soldCount'),
+        freeEl=document.getElementById('freeCount'),
+        countdownEl=document.getElementById('countdown'),
+        modalWrap=document.getElementById('modalWrap'),
+        mEmail=document.getElementById('mEmail'),
+        selCountEl=document.getElementById('selCount'),
+        totalPriceEl=document.getElementById('totalPrice'),
+        lotRuleEl=document.getElementById('lotRule'),
+        confirmBtn=document.getElementById('confirmStripe');
 
- const selection = new Set();
- let LAST_GRID_DATA = null;
+  const selection = new Set(); // "x:y"
+  let LAST_GRID_DATA = null;
+  let LAST_QUOTE = null;
 
- const stepPx = () => {
-   const cell = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell'))||14;
-   const gap  = parseInt(getComputedStyle(grid).gap)||1;
-   return cell + gap;
- };
- const idAtClientPoint = (clientX, clientY) => {
-   const rect = grid.getBoundingClientRect();
-   const s = stepPx();
-   const x = Math.floor((clientX - rect.left) / s);
-   const y = Math.floor((clientY - rect.top)  / s);
-   if (x<0 || y<0 || x>=COLS || y>=ROWS) return null;
-   return `${x}:${y}`;
- };
+  const stepPx = () => {
+    const cell = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell'))||14;
+    const gap  = parseInt(getComputedStyle(grid).gap)||1;
+    return cell + gap;
+  };
+  const idAtClientPoint = (clientX, clientY) => {
+    const rect = grid.getBoundingClientRect();
+    const s = stepPx();
+    const x = Math.floor((clientX - rect.left) / s);
+    const y = Math.floor((clientY - rect.top)  / s);
+    if (x<0 || y<0 || x>=COLS || y>=ROWS) return null;
+    return `${x}:${y}`;
+  };
 
- // Grille
- (function buildGrid(){
-   const frag=document.createDocumentFragment();
-   for(let y=0;y<ROWS;y++){
-     for(let x=0;x<COLS;x++){
-       const d=document.createElement('div');
-       d.className='cell';
-       d.dataset.x=x; d.dataset.y=y;
-       frag.appendChild(d);
-     }
-   }
-   grid.appendChild(frag);
- })();
+  /* Grille */
+  (function buildGrid(){
+    const frag=document.createDocumentFragment();
+    for(let y=0;y<ROWS;y++){
+      for(let x=0;x<COLS;x++){
+        const d=document.createElement('div');
+        d.className='cell';
+        d.dataset.x=x; d.dataset.y=y;
+        frag.appendChild(d);
+      }
+    }
+    grid.appendChild(frag);
+  })();
 
- // Sélection clic/drag
- grid.addEventListener('click', (e)=>{
-   const cell = e.target.closest('.cell');
-   if(!cell) return;
-   const id = `${cell.dataset.x}:${cell.dataset.y}`;
-   if (e.altKey) selection.clear();
-   if (selection.has(id)) selection.delete(id); else selection.add(id);
-   updateUI();
- });
+  /* clic simple (ALT = remplace) — ON PERMET de sélectionner même si "sold" (le serveur validera) */
+  grid.addEventListener('click', (e)=>{
+    const cell = e.target.closest('.cell');
+    if(!cell) return;
+    const id = `${cell.dataset.x}:${cell.dataset.y}`;
 
- let dragging=false, startId=null;
- gridWrap.addEventListener('mousedown',(e)=>{
-   const id = idAtClientPoint(e.clientX, e.clientY);
-   if (!id) return;
-   dragging=true; startId=id;
-   const s=stepPx(); const [sx,sy]=startId.split(':').map(Number);
-   box.style.display='block'; box.style.left=(sx*s)+'px'; box.style.top=(sy*s)+'px';
-   e.preventDefault();
- });
- window.addEventListener('mousemove',(e)=>{
-   if(!dragging) return;
-   const cur=idAtClientPoint(e.clientX,e.clientY); if(!cur) return;
-   const s=stepPx(); const [sx,sy]=startId.split(':').map(Number); const [cx,cy]=cur.split(':').map(Number);
-   const x1=Math.min(sx,cx),x2=Math.max(sx,cx),y1=Math.min(sy,cy),y2=Math.max(sy,cy);
-   for(let y=y1;y<=y2;y++)for(let x=x1;x<=x2;x++)selection.add(`${x}:${y}`);
-   box.style.display='none'; updateUI();
- });
- window.addEventListener('mouseup',()=>{dragging=false;startId=null;box.style.display='none';});
+    if (e.altKey) {
+      selection.clear();
+      grid.querySelectorAll('.cell.sel').forEach(n=>n.classList.remove('sel'));
+    }
 
- function currentRect(){
-   if (selection.size===0) return null;
-   let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
-   for(const id of selection){const [x,y]=id.split(':').map(Number);
-     minX=Math.min(minX,x);minY=Math.min(minY,y);
-     maxX=Math.max(maxX,x);maxY=Math.max(maxY,y);}
-   return {x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1};
- }
+    if (selection.has(id)) { selection.delete(id); cell.classList.remove('sel'); }
+    else { selection.add(id); cell.classList.add('sel'); }
+    updateUI(false);
+  });
 
- function updateUI(){
-   const sold = (LAST_GRID_DATA && LAST_GRID_DATA.cells)?Object.keys(LAST_GRID_DATA.cells).length:0;
-   soldEl.textContent=sold.toLocaleString('fr-FR');
-   freeEl.textContent=(TOTAL-sold).toLocaleString('fr-FR');
-   selCountEl.textContent=selection.size;
-   buyBtn.disabled=selection.size===0;
- }
+  /* Lasso */
+  let dragging=false, startId=null;
+  gridWrap.addEventListener('mousedown',(e)=>{
+    const id = idAtClientPoint(e.clientX, e.clientY);
+    if (!id) return;
+    dragging = true; startId = id;
 
- // Countdown
- (function tick(){
-   const ms=DEADLINE-new Date(); if(ms<=0){countdownEl.textContent='Terminé';return;}
-   const s=Math.floor(ms/1000),d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60);
-   countdownEl.textContent=`${d}j ${h}h ${m}m`; setTimeout(tick,1000);
- })();
+    if (e.altKey) {
+      selection.clear();
+      grid.querySelectorAll('.cell.sel').forEach(n=>n.classList.remove('sel'));
+    }
 
- clearBtn.onclick=()=>{selection.clear();grid.querySelectorAll('.cell.sel').forEach(n=>n.classList.remove('sel'));updateUI();};
+    const s = stepPx();
+    const [sx, sy] = startId.split(':').map(Number);
+    box.style.display='block';
+    box.style.left  = (sx * s) + 'px';
+    box.style.top   = (sy * s) + 'px';
+    box.style.width = s + 'px';
+    box.style.height= s + 'px';
+    e.preventDefault();
+  });
 
- // --- API ---
- const API_BASE=window.location.origin;
- async function postJSON(url,body){
-   const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-   const data=await r.json().catch(()=>({}));return{ok:r.ok,data};
- }
+  window.addEventListener('mousemove',(e)=>{
+    if(!dragging) return;
+    const curId = idAtClientPoint(e.clientX, e.clientY);
+    if(!curId) return;
 
- async function loadGridState(){
-   try{
-     const r=await fetch(`${API_BASE}/api/cells`);
-     const data=await r.json();
-     if(data&&data.ok)renderSoldAndLogos(data);
-   }catch(e){console.warn('loadGridState error',e);}
- }
+    const s = stepPx();
+    const [sx, sy] = startId.split(':').map(Number);
+    const [cx, cy] = curId.split(':').map(Number);
+    const x1 = Math.min(sx, cx), x2 = Math.max(sx, cx);
+    const y1 = Math.min(sy, cy), y2 = Math.max(sy, cy);
 
- function renderSoldAndLogos(data){
-   LAST_GRID_DATA=data;
-   const wrap=document.getElementById('gridWrap');
-   const s=stepPx();
+    box.style.display='block';
+    box.style.left   = (x1 * s) + 'px';
+    box.style.top    = (y1 * s) + 'px';
+    box.style.width  = ((x2 - x1 + 1) * s - (parseInt(getComputedStyle(grid).gap)||1)) + 'px';
+    box.style.height = ((y2 - y1 + 1) * s - (parseInt(getComputedStyle(grid).gap)||1)) + 'px';
 
-   let art=document.getElementById('artLayer'); if(art)art.remove();
-   art=document.createElement('div');
-   art.id='artLayer';
-   art.style.position='absolute';
-   art.style.inset='0';
-   art.style.pointerEvents='auto';
-   art.style.zIndex='2';
-   wrap.appendChild(art);
+    for(let y=y1;y<=y2;y++){
+      for(let x=x1;x<=x2;x++){
+        const id = `${x}:${y}`;
+        if(!selection.has(id)){
+          selection.add(id);
+          const node = grid.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+          if (node) node.classList.add('sel');
+        }
+      }
+    }
+    updateUI(false);
+  });
 
-   grid.querySelectorAll('.cell.sold').forEach(n=>n.classList.remove('sold'));
+  window.addEventListener('mouseup',()=>{
+    if(!dragging) return;
+    dragging=false; startId=null;
+    box.style.display='none';
+  });
 
-   const lots={};
-   for(const key of Object.keys(data.cells||{})){
-     const info=data.cells[key];
-     const lotKey=`${info.lotOriginX}:${info.lotOriginY}`;
-     if(!lots[lotKey])lots[lotKey]=info;
-   }
+  function currentRect(){
+    if (selection.size===0) return null;
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    for(const id of selection){
+      const [x,y]=id.split(':').map(Number);
+      minX=Math.min(minX,x); minY=Math.min(minY,y);
+      maxX=Math.max(maxX,x); maxY=Math.max(maxY,y);
+    }
+    return { x:minX, y:minY, w:maxX-minX+1, h:maxY-minY+1 };
+  }
 
-   const gap=parseInt(getComputedStyle(grid).gap)||1;
-   for(const lotKey of Object.keys(lots)){
-     const info=lots[lotKey];
-     for(let yy=info.lotOriginY;yy<info.lotOriginY+info.lotH;yy++){
-       for(let xx=info.lotOriginX;xx<info.lotOriginX+info.lotW;xx++){
-         const node=grid.querySelector(`.cell[data-x="${xx}"][data-y="${yy}"]`);
-         if(node)node.classList.add('sold');
-       }
-     }
+  function updateUI(resetPrice=true){
+    const sold = (LAST_GRID_DATA && LAST_GRID_DATA.cells) ? Object.keys(LAST_GRID_DATA.cells).length : 0;
+    soldEl.textContent = sold.toLocaleString('fr-FR');
+    freeEl.textContent = (TOTAL - sold).toLocaleString('fr-FR');
 
-     const left=info.lotOriginX*s;
-     const top=info.lotOriginY*s;
-     const wpx=info.lotW*s-gap;
-     const hpx=info.lotH*s-gap;
-     const box=document.createElement('a');
-     box.href=info.link||'#';
-     box.target='_blank';
-     box.style.position='absolute';
-     box.style.left=left+'px';box.style.top=top+'px';
-     box.style.width=wpx+'px';box.style.height=hpx+'px';
-     box.style.border='1px solid #17ffd5';box.style.borderRadius='2px';box.title=info.name||'';
+    const qty = selection.size;
+    selCountEl.textContent = qty;
+    if (resetPrice) {
+      totalPriceEl.textContent = qty ? 'Calcul…' : '0 €';
+      lotRuleEl.textContent = '';
+      confirmBtn.disabled = true;
+    }
+    buyBtn.disabled = qty === 0 || new Date()>=DEADLINE;
+  }
 
-     if(info.logo){
-       const img=document.createElement('img');
-       img.src=info.logo;
-       img.alt=info.name
+  /* Modale + countdown + clear */
+  buyBtn.addEventListener('click', async ()=>{
+    if(selection.size===0) return;
+    if(new Date()>=DEADLINE){ alert('Compétition terminée.'); return; }
+    await refreshQuoteInModal();
+    modalWrap.style.display='flex';
+  });
+  document.getElementById('cancelBuy').addEventListener('click', ()=> modalWrap.style.display='none');
+
+  (function tick(){
+    const ms = DEADLINE - new Date();
+    if(ms<=0){ countdownEl.textContent='Terminé'; buyBtn.disabled=true; return; }
+    const s=Math.floor(ms/1000), d=Math.floor(s/86400), h=Math.floor((s%86400)/3600), m=Math.floor((s%3600)/60), sec=s%60;
+    countdownEl.textContent = `${d}j ${h}h ${m}m ${sec}s`;
+    setTimeout(tick, 1000);
+  })();
+
+  clearBtn.addEventListener('click', ()=>{
+    selection.clear();
+    grid.querySelectorAll('.cell.sel').forEach(n=>n.classList.remove('sel'));
+    updateUI();
+  });
+
+  /* === API === */
+  const API_BASE = window.location.origin;
+
+  async function postJSON(url, body){
+    const r = await fetch(url, { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body) });
+    const data = await r.json().catch(()=> ({}));
+    return { ok:r.ok, data };
+  }
+
+  async function loadGridState(){
+    try{
+      const r = await fetch(`${API_BASE}/api/cells`);
+      const data = await r.json();
+      if (data && data.ok) renderSoldAndLogos(data);
+    }catch(e){ console.warn('loadGridState error', e); }
+  }
+
+  function renderSoldAndLogos(data){
+    LAST_GRID_DATA = data;
+    const wrap = document.getElementById('gridWrap');
+    const s = stepPx();
+
+    // retirer ancien calque
+    let art = document.getElementById('artLayer');
+    if (art) art.remove();
+
+    // calque cliquable
+    art = document.createElement('div');
+    art.id = 'artLayer';
+    art.style.position='absolute';
+    art.style.inset='0';
+    art.style.pointerEvents='auto'; // ✅ liens cliquables
+    wrap.appendChild(art);
+
+    // reset "sold"
+    grid.querySelectorAll('.cell.sold').forEach(n=>n.classList.remove('sold'));
+
+    // grouper par lot (lotOriginX/Y)
+    const lots = {};
+    for (const key of Object.keys(data.cells || {})) {
+      const info = data.cells[key];
+      const lotKey = `${info.lotOriginX}:${info.lotOriginY}`;
+      if (!lots[lotKey]) lots[lotKey] = info;
+    }
+
+    const gap = parseInt(getComputedStyle(grid).gap)||1;
+
+    for (const lotKey of Object.keys(lots)) {
+      const info = lots[lotKey];
+
+      // marquer vendues
+      for (let yy = info.lotOriginY; yy < info.lotOriginY + info.lotH; yy++) {
+        for (let xx = info.lotOriginX; xx < info.lotOriginX + info.lotW; xx++) {
+          const node = grid.querySelector(`.cell[data-x="${xx}"][data-y="${yy}"]`);
+          if (node) node.classList.add('sold');
+        }
+      }
+
+      // box unique par lot
+      const left = info.lotOriginX * s;
+      const top  = info.lotOriginY * s;
+      const wpx  = info.lotW * s - gap;
+      const hpx  = info.lotH * s - gap;
+
+      const box = document.createElement('a');
+      box.href = info.link || '#';
+      box.target = '_blank';
+      box.style.position='absolute';
+      box.style.left = left+'px';
+      box.style.top  = top+'px';
+      box.style.width  = wpx+'px';
+      box.style.height = hpx+'px';
+      box.style.border = '1px solid #17ffd5';
+      box.style.borderRadius='2px';
+      box.title = info.name || '';
+
+      if (info.logo) {
+        const img = document.createElement('img');
+        img.src = info.logo;
+        img.alt = info.name || '';
+        img.style.width='100%';
+        img.style.height='100%';
+        img.style.objectFit='contain'; // ✅ image unique étirée sur le lot
+        img.style.display='block';
+        box.appendChild(img);
+      } else {
+        box.style.background = info.color || '#1e90ff';
+      }
+
+      box.addEventListener('dblclick', () => {
+        if (info.link) window.open(info.link, '_blank');
+      });
+
+      art.appendChild(box);
+    }
+  }
+
+  // zoom → re-render overlays
+  zoom.addEventListener('input', e=>{
+    document.documentElement.style.setProperty('--cell', e.target.value+'px');
+    if (LAST_GRID_DATA) renderSoldAndLogos(LAST_GRID_DATA);
+  });
+
+  async function refreshQuoteInModal(){
+    try{
+      const rect = currentRect();
+      if (!rect){ totalPriceEl.textContent='0 €'; confirmBtn.disabled=true; return; }
+
+      const buyerEmail=(mEmail.value||'').trim() || 'temp@example.com';
+      const body = { ...rect, buyerEmail };
+
+      const q = await postJSON(`${API_BASE}/api/purchase-rect/quote`, body);
+      if(!q.ok){ totalPriceEl.textContent='—'; lotRuleEl.textContent=''; confirmBtn.disabled=true; return; }
+
+      LAST_QUOTE = q.data;
+      const euros = (q.data.totalCents||0)/100;
+      totalPriceEl.textContent = euros.toLocaleString('fr-FR',{style:'currency',currency:'EUR'});
+      lotRuleEl.textContent = q.data?.lotRule ? ('Règle : ' + q.data.lotRule) : '';
+      confirmBtn.disabled = false;
+    }catch(e){
+      console.error(e);
+      totalPriceEl.textContent='—';
+      confirmBtn.disabled=true;
+    }
+  }
+
+  mEmail.addEventListener('change', refreshQuoteInModal);
+
+  (function(){
+    if (!confirmBtn){ console.error('⚠️ #confirmStripe introuvable'); return; }
+    confirmBtn.addEventListener('click', onConfirmStripe);
+  })();
+
+  async function onConfirmStripe(){
+    try{
+      const rect = currentRect();
+      if (!rect){ alert('Sélectionne des cases.'); return; }
+      const buyerEmail=(mEmail.value||'').trim();
+      if(!buyerEmail){ alert('Mets ton email.'); return; }
+
+      const name  = (document.getElementById('mName').value||'').trim();
+      const link  = (document.getElementById('mLink').value||'').trim();
+      const logo  = (document.getElementById('mLogo').value||'').trim();
+      const color = (document.getElementById('mColor').value||'#1e90ff').trim();
+      const msg   = (document.getElementById('mMsg').value||'').trim();
+
+      const body = { ...rect, buyerEmail, name, link, logo, color, msg };
+
+      // revérifier le devis serveur
+      const q = await postJSON(`${API_BASE}/api/purchase-rect/quote`, body);
+      if(!q.ok){
+        console.error(q.data);
+        alert(q.data?.error || 'Devis refusé');
+        return;
+      }
+
+      const r = await postJSON(`${API_BASE}/api/purchase-rect/checkout`, body);
+      if(!r.ok || !r.data?.ok){
+        console.error(r.data);
+        alert(r.data?.error || 'Erreur paiement');
+        return;
+      }
+
+      window.location.href = r.data.url; // → Stripe
+    } catch(e){
+      console.error(e); alert('Erreur : ' + (e.message||e));
+    }
+  }
+
+  // rafraîchir quand on revient de Stripe (onglet re-visible)
+  document.addEventListener('visibilitychange', ()=>{
+    if (!document.hidden) loadGridState();
+  });
+
+  // premier chargement + petit poll toutes les 20s
+  loadGridState();
+  setInterval(loadGridState, 20000);
+});
+</script>
+</body>
+</html>

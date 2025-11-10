@@ -12,57 +12,57 @@ const PORT = process.env.PORT || 4242;
 
 /* 1) Webhook Stripe (RAW avant json) */
 app.post(
- '/webhook/stripe',
- express.raw({ type: 'application/json' }),
- async (req, res) => {
-   try {
-     const Stripe = require('stripe');
-     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-     const sig    = req.headers['stripe-signature'];
-     const event  = stripe.webhooks.constructEvent(
-       req.body,
-       sig,
-       process.env.STRIPE_WEBHOOK_SECRET
-     );
+  '/webhook/stripe',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    try {
+      const Stripe = require('stripe');
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+      const sig    = req.headers['stripe-signature'];
+      const event  = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
 
-     if (event.type === 'checkout.session.completed') {
-       const session = event.data.object;
-       if (session.metadata && session.metadata.kind === 'rect') {
-         const payload = {
-           x: Number(session.metadata.x),
-           y: Number(session.metadata.y),
-           w: Number(session.metadata.w),
-           h: Number(session.metadata.h),
-           buyerEmail: session.metadata.buyerEmail,
-           name:  session.metadata.name  || '',
-           link:  session.metadata.link  || '',
-           logo:  session.metadata.logo  || '',
-           color: session.metadata.color || '#1e90ff',
-           msg:   session.metadata.msg   || ''
-         };
-         const out = app.locals.fulfillRectDirect(payload);
-         if (!out.ok) console.error('❌ Fulfill rect ERROR (webhook):', out.error);
-       }
-     }
+      if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        if (session.metadata && session.metadata.kind === 'rect') {
+          const payload = {
+            x: Number(session.metadata.x),
+            y: Number(session.metadata.y),
+            w: Number(session.metadata.w),
+            h: Number(session.metadata.h),
+            buyerEmail: session.metadata.buyerEmail,
+            name:  session.metadata.name  || '',
+            link:  session.metadata.link  || '',
+            logo:  session.metadata.logo  || '',
+            color: session.metadata.color || '#1e90ff',
+            msg:   session.metadata.msg   || ''
+          };
+          const out = app.locals.fulfillRectDirect(payload);
+          if (!out.ok) console.error('❌ Fulfill rect ERROR:', out.error);
+        }
+      }
 
-     res.json({ received: true });
-   } catch (err) {
-     console.error('Webhook error:', err.message);
-     res.status(400).send(`Webhook Error: ${err.message}`);
-   }
- }
+      res.json({ received: true });
+    } catch (err) {
+      console.error('Webhook error:', err.message);
+      res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+  }
 );
 
 /* 2) middlewares */
 app.use(
- cors({
-   origin: [
-     'http://127.0.0.1:5500',
-     'http://localhost:5500',
-     `http://localhost:${PORT}`,
-     'https://pixel-world-cup.onrender.com',
-   ],
- })
+  cors({
+    origin: [
+      'http://127.0.0.1:5500',
+      'http://localhost:5500',
+      `http://localhost:${PORT}`,
+      'https://pixel-world-cup.onrender.com',
+    ],
+  })
 );
 
 // ⚠️ Après le webhook RAW seulement
@@ -78,110 +78,68 @@ app.get('/buy',     (req, res) => res.sendFile(path.join(__dirname, 'buy.html'))
 app.get('/about',   (req, res) => res.sendFile(path.join(__dirname, 'about.html')));
 app.get('/cancel',  (req, res) => res.sendFile(path.join(__dirname, 'cancel.html')));
 app.get('/success', (req, res) => {
- try { res.sendFile(path.join(__dirname, 'success.html')); }
- catch { res.sendFile(path.join(__dirname, 'succes.html')); }
+  try { res.sendFile(path.join(__dirname, 'success.html')); }
+  catch { res.sendFile(path.join(__dirname, 'succes.html')); }
 });
 
 /* 4) routes “rectangle” */
 attachRectRoutes(app, {
- dbPath: path.join(__dirname, 'data', 'db.json'),
+  dbPath: path.join(__dirname, 'data', 'db.json'),
 });
 
 /* 5) Stripe checkout (utilise la fonction locale de devis) */
 app.post('/api/purchase-rect/checkout', async (req, res) => {
- try {
-   const { x, y, w, h, buyerEmail, name, link, logo, color, msg } = req.body || {};
-   if (!buyerEmail) return res.status(400).json({ error: 'buyerEmail requis' });
+  try {
+    const { x, y, w, h, buyerEmail, name, link, logo, color, msg } = req.body || {};
+    if (!buyerEmail) return res.status(400).json({ error: 'buyerEmail requis' });
 
-   if (typeof app.locals.calcRectQuote !== 'function') {
-     return res.status(500).json({ error: 'quote_function_missing' });
-   }
-   const quote = app.locals.calcRectQuote({ x, y, w, h, buyerEmail });
-   if (!quote.ok) return res.status(400).json(quote);
+    if (typeof app.locals.calcRectQuote !== 'function') {
+      return res.status(500).json({ error: 'quote_function_missing' });
+    }
+    const quote = app.locals.calcRectQuote({ x, y, w, h, buyerEmail });
+    if (!quote.ok) return res.status(400).json(quote);
 
-   const Stripe = require('stripe');
-   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const Stripe = require('stripe');
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-   const BASE = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
+    const BASE = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
 
-   const session = await stripe.checkout.sessions.create({
-     mode: 'payment',
-     success_url: `${BASE}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-     cancel_url:  `${BASE}/cancel.html`,
-     customer_email: buyerEmail,
-     line_items: [
-       {
-         price_data: {
-           currency: quote.currency || 'eur',
-           product_data: { name: `Achat bloc ${w}×${h} à (${x},${y})` },
-           unit_amount: quote.totalCents,
-         },
-         quantity: 1,
-       }
-     ],
-     metadata: {
-       kind: 'rect',
-       x: String(x), y: String(y), w: String(w), h: String(h),
-       buyerEmail,
-       name:  (name  || '').slice(0,200),
-       link:  (link  || '').slice(0,500),
-       logo:  (logo  || '').slice(0,500),
-       color: (color || '').slice(0,30),
-       msg:   (msg   || '').slice(0,500)
-     }
-   });
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      success_url: `${BASE}/success.html`,
+      cancel_url:  `${BASE}/cancel.html`,
+      customer_email: buyerEmail,
+      line_items: [
+        {
+          price_data: {
+            currency: quote.currency || 'eur',
+            product_data: { name: `Achat bloc ${w}×${h} à (${x},${y})` },
+            unit_amount: quote.totalCents,
+          },
+          quantity: 1,
+        }
+      ],
+      metadata: {
+        kind: 'rect',
+        x: String(x), y: String(y), w: String(w), h: String(h),
+        buyerEmail,
+        name:  (name  || '').slice(0,200),
+        link:  (link  || '').slice(0,500),
+        logo:  (logo  || '').slice(0,500),
+        color: (color || '').slice(0,30),
+        msg:   (msg   || '').slice(0,500)
+      }
+    });
 
-   res.json({ ok: true, url: session.url });
- } catch (err) {
-   console.error(err);
-   res.status(500).json({ error: 'checkout_error' });
- }
+    res.json({ ok: true, url: session.url });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'checkout_error' });
+  }
 });
 
-/* 6) Confirmation “fallback” si le webhook ne passe pas */
-app.post('/api/purchase-rect/confirm', async (req, res) => {
- try {
-   const { session_id } = req.body || {};
-   if (!session_id) return res.status(400).json({ ok:false, error:'missing_session_id' });
-
-   const Stripe = require('stripe');
-   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-   const session = await stripe.checkout.sessions.retrieve(session_id);
-
-   if (!session || session.payment_status !== 'paid') {
-     return res.status(400).json({ ok:false, error:'not_paid' });
-   }
-   if (!session.metadata || session.metadata.kind !== 'rect') {
-     return res.status(400).json({ ok:false, error:'metadata_missing' });
-   }
-
-   const payload = {
-     x: Number(session.metadata.x),
-     y: Number(session.metadata.y),
-     w: Number(session.metadata.w),
-     h: Number(session.metadata.h),
-     buyerEmail: session.metadata.buyerEmail,
-     name:  session.metadata.name  || '',
-     link:  session.metadata.link  || '',
-     logo:  session.metadata.logo  || '',
-     color: session.metadata.color || '#1e90ff',
-     msg:   session.metadata.msg   || ''
-   };
-
-   const out = app.locals.fulfillRectDirect(payload);
-   if (!out.ok) return res.status(500).json({ ok:false, error: out.error });
-
-   res.json({ ok:true });
- } catch (e) {
-   console.error('confirm error:', e);
-   res.status(500).json({ ok:false, error:'confirm_error' });
- }
-});
-
-/* 7) lancement */
+/* 6) lancement */
 app.listen(PORT, '0.0.0.0', () => {
- console.log(`✅ Serveur prêt - Port ${PORT}`);
+  console.log(`✅ Serveur prêt - Port ${PORT}`);
 });
-
-
 
