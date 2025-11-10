@@ -185,11 +185,10 @@ document.addEventListener("DOMContentLoaded", () => {
     grid.appendChild(frag);
   })();
 
-  /* clic simple (ALT = remplace) — on bloque la sélection sur "sold" */
+  /* clic simple (ALT = remplace) — on AUTORISE la sélection même si "sold" */
   grid.addEventListener('click', (e)=>{
     const cell = e.target.closest('.cell');
     if(!cell) return;
-    if (cell.classList.contains('sold')) return; // pas de sélection sur vendu
     const id = `${cell.dataset.x}:${cell.dataset.y}`;
 
     if (e.altKey) {
@@ -202,7 +201,7 @@ document.addEventListener("DOMContentLoaded", () => {
     updateUI(true);
   });
 
-  /* Lasso */
+  /* Lasso — on AUTORISE aussi sur sold */
   let dragging=false, startId=null;
   gridWrap.addEventListener('mousedown',(e)=>{
     const id = idAtClientPoint(e.clientX, e.clientY);
@@ -243,12 +242,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     for(let y=y1;y<=y2;y++){
       for(let x=x1;x<=x2;x++){
-        const node = grid.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
-        if (!node || node.classList.contains('sold')) continue; // on saute les vendues
         const id = `${x}:${y}`;
         if(!selection.has(id)){
           selection.add(id);
-          node.classList.add('sel');
+          const node = grid.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+          if (node) node.classList.add('sel');
         }
       }
     }
@@ -336,7 +334,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let art = document.getElementById('artLayer');
     if (art) art.remove();
 
-    // calque parent : pointer-events:none (⚠️ pour ne pas bloquer la sélection)
+    // calque parent : pointer-events:none (pour NE PAS bloquer la sélection)
     art = document.createElement('div');
     art.id = 'artLayer';
     art.style.position='absolute';
@@ -353,7 +351,7 @@ document.addEventListener("DOMContentLoaded", () => {
     for (const key of Object.keys(data.cells || {})) {
       const info = data.cells[key];
       const lotKey = `${info.lotOriginX}:${info.lotOriginY}`;
-      if (!lots[lotKey]) lots[lotKey] = info; // on garde la dernière couche
+      if (!lots[lotKey]) lots[lotKey] = info; // dernière couche
     }
 
     const gap = parseInt(getComputedStyle(grid).gap)||1;
@@ -369,15 +367,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      // box unique par lot
+      // box unique par lot (non interactif, image "cover")
       const left = info.lotOriginX * s;
       const top  = info.lotOriginY * s;
       const wpx  = info.lotW * s - gap;
       const hpx  = info.lotH * s - gap;
 
-      const box = document.createElement('a');
-      box.href = info.link || '#';
-      box.target = '_blank';
+      const box = document.createElement('div');
       box.style.position='absolute';
       box.style.left = left+'px';
       box.style.top  = top+'px';
@@ -385,9 +381,13 @@ document.addEventListener("DOMContentLoaded", () => {
       box.style.height = hpx+'px';
       box.style.border = '1px solid #17ffd5';
       box.style.borderRadius='2px';
-      box.style.title = info.name || '';
-      box.style.pointerEvents='auto'; // ✅ cliquable UNIQUEMENT sur le bloc
-      box.addEventListener('dblclick', ()=>{ if(info.link) window.open(info.link,'_blank'); });
+      box.style.boxSizing='border-box';
+      box.style.pointerEvents='none'; // n’empêche PAS la sélection
+      box.dataset.lotOriginX = info.lotOriginX;
+      box.dataset.lotOriginY = info.lotOriginY;
+      box.dataset.lotW = info.lotW;
+      box.dataset.lotH = info.lotH;
+      box.dataset.link = info.link || '';
 
       if (info.logo) {
         const img = document.createElement('img');
@@ -395,8 +395,9 @@ document.addEventListener("DOMContentLoaded", () => {
         img.alt = info.name || '';
         img.style.width='100%';
         img.style.height='100%';
-        img.style.objectFit='contain'; // image unique étirée sur le lot
+        img.style.objectFit='cover';   // ✅ remplit le lot
         img.style.display='block';
+        img.draggable = false;
         box.appendChild(img);
       } else {
         box.style.background = info.color || '#1e90ff';
@@ -405,6 +406,26 @@ document.addEventListener("DOMContentLoaded", () => {
       art.appendChild(box);
     }
   }
+
+  // Double-clic sur un lot → ouvre le lien (sans bloquer la sélection)
+  gridWrap.addEventListener('dblclick', (e)=>{
+    const id = idAtClientPoint(e.clientX, e.clientY);
+    if (!id) return;
+    const [cx, cy] = id.split(':').map(Number);
+
+    const art = document.getElementById('artLayer');
+    if (!art) return;
+
+    for (const box of art.children) {
+      const ox = +box.dataset.lotOriginX, oy = +box.dataset.lotOriginY;
+      const lw = +box.dataset.lotW,      lh = +box.dataset.lotH;
+      if (cx >= ox && cx < ox+lw && cy >= oy && cy < oy+lh) {
+        const link = box.dataset.link;
+        if (link) window.open(link, '_blank');
+        break;
+      }
+    }
+  });
 
   // zoom → re-render overlays
   zoom.addEventListener('input', e=>{
@@ -436,7 +457,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   mEmail.addEventListener('change', refreshQuoteInModal);
 
-  // paiement
+  // Paiement Stripe
   (function(){
     if (!confirmBtn){ console.error('⚠️ #confirmStripe introuvable'); return; }
     confirmBtn.addEventListener('click', onConfirmStripe);
@@ -457,7 +478,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const body = { ...rect, buyerEmail, name, link, logo, color, msg };
 
-      // sécuriser avec un devis serveur juste avant
+      // Devis serveur juste avant
       const q = await postJSON(`${API_BASE}/api/purchase-rect/quote`, body);
       if(!q.ok){ console.error(q.data); alert(q.data?.error || 'Devis refusé'); return; }
 
@@ -473,12 +494,12 @@ document.addEventListener("DOMContentLoaded", () => {
   // 1) premier chargement
   loadGridState();
 
-  // 2) quand on revient de Stripe ou on revient sur l’onglet → recharge l’état
+  // 2) retour d’onglet/Stripe → recharge l’état
   document.addEventListener('visibilitychange', ()=>{
     if (!document.hidden) loadGridState();
   });
 
-  // 3) petit poll toutes les 20s pour voir les achats des autres
+  // 3) poll pour les achats des autres (20s)
   setInterval(loadGridState, 20000);
 });
 </script>
