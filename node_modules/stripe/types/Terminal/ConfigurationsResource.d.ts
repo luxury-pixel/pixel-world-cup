@@ -5,12 +5,12 @@ declare module 'stripe' {
     namespace Terminal {
       interface ConfigurationCreateParams {
         /**
-         * An object containing device type specific settings for BBPOS WisePad 3 readers
+         * An object containing device type specific settings for BBPOS WisePad 3 readers.
          */
         bbpos_wisepad3?: ConfigurationCreateParams.BbposWisepad3;
 
         /**
-         * An object containing device type specific settings for BBPOS WisePOS E readers
+         * An object containing device type specific settings for BBPOS WisePOS E readers.
          */
         bbpos_wisepos_e?: ConfigurationCreateParams.BbposWiseposE;
 
@@ -30,22 +30,22 @@ declare module 'stripe' {
         offline?: Stripe.Emptyable<ConfigurationCreateParams.Offline>;
 
         /**
-         * Reboot time settings for readers that support customized reboot time configuration.
+         * Reboot time settings for readers. that support customized reboot time configuration.
          */
         reboot_window?: ConfigurationCreateParams.RebootWindow;
 
         /**
-         * An object containing device type specific settings for Stripe S700 readers
+         * An object containing device type specific settings for Stripe S700 readers.
          */
         stripe_s700?: ConfigurationCreateParams.StripeS700;
 
         /**
-         * Tipping configurations for readers supporting on-reader tips
+         * Tipping configurations for readers. supporting on-reader tips
          */
         tipping?: Stripe.Emptyable<ConfigurationCreateParams.Tipping>;
 
         /**
-         * An object containing device type specific settings for Verifone P400 readers
+         * An object containing device type specific settings for Verifone P400 readers.
          */
         verifone_p400?: ConfigurationCreateParams.VerifoneP400;
 
@@ -58,7 +58,7 @@ declare module 'stripe' {
       namespace ConfigurationCreateParams {
         interface BbposWisepad3 {
           /**
-           * A File ID representing an image you would like displayed on the reader.
+           * A File ID representing an image you want to display on the reader.
            */
           splashscreen?: Stripe.Emptyable<string>;
         }
@@ -91,7 +91,7 @@ declare module 'stripe' {
 
         interface StripeS700 {
           /**
-           * A File ID representing an image you would like displayed on the reader.
+           * A File ID representing an image you want to display on the reader.
            */
           splashscreen?: Stripe.Emptyable<string>;
         }
@@ -141,6 +141,11 @@ declare module 'stripe' {
            * Tipping configuration for GBP
            */
           gbp?: Tipping.Gbp;
+
+          /**
+           * Tipping configuration for GIP
+           */
+          gip?: Tipping.Gip;
 
           /**
            * Tipping configuration for HKD
@@ -341,6 +346,23 @@ declare module 'stripe' {
           }
 
           interface Gbp {
+            /**
+             * Fixed amounts displayed when collecting a tip
+             */
+            fixed_amounts?: Array<number>;
+
+            /**
+             * Percentages displayed when collecting a tip
+             */
+            percentages?: Array<number>;
+
+            /**
+             * Below this amount, fixed amounts will be displayed; above it, percentages will be displayed
+             */
+            smart_tip_threshold?: number;
+          }
+
+          interface Gip {
             /**
              * Fixed amounts displayed when collecting a tip
              */
@@ -564,7 +586,7 @@ declare module 'stripe' {
 
         interface VerifoneP400 {
           /**
-           * A File ID representing an image you would like displayed on the reader.
+           * A File ID representing an image you want to display on the reader.
            */
           splashscreen?: Stripe.Emptyable<string>;
         }
@@ -669,14 +691,14 @@ declare module 'stripe' {
 
       interface ConfigurationUpdateParams {
         /**
-         * An object containing device type specific settings for BBPOS WisePad 3 readers
+         * An object containing device type specific settings for BBPOS WisePad 3 readers.
          */
         bbpos_wisepad3?: Stripe.Emptyable<
           ConfigurationUpdateParams.BbposWisepad3
         >;
 
         /**
-         * An object containing device type specific settings for BBPOS WisePOS E readers
+         * An object containing device type specific settings for BBPOS WisePOS E readers.
          */
         bbpos_wisepos_e?: Stripe.Emptyable<
           ConfigurationUpdateParams.BbposWiseposE
@@ -698,24 +720,24 @@ declare module 'stripe' {
         offline?: Stripe.Emptyable<ConfigurationUpdateParams.Offline>;
 
         /**
-         * Reboot time settings for readers that support customized reboot time configuration.
+         * Reboot time settings for readers. that support customized reboot time configuration.
          */
         reboot_window?: Stripe.Emptyable<
           ConfigurationUpdateParams.RebootWindow
         >;
 
         /**
-         * An object containing device type specific settings for Stripe S700 readers
+         * An object containing device type specific settings for Stripe S700 readers.
          */
         stripe_s700?: Stripe.Emptyable<ConfigurationUpdateParams.StripeS700>;
 
         /**
-         * Tipping configurations for readers supporting on-reader tips
+         * Tipping configurations for readers. supporting on-reader tips
          */
         tipping?: Stripe.Emptyable<ConfigurationUpdateParams.Tipping>;
 
         /**
-         * An object containing device type specific settings for Verifone P400 readers
+         * An object containing device type specific settings for Verifone P400 readers.
          */
         verifone_p400?: Stripe.Emptyable<
           ConfigurationUpdateParams.VerifoneP400
@@ -730,7 +752,7 @@ declare module 'stripe' {
       namespace ConfigurationUpdateParams {
         interface BbposWisepad3 {
           /**
-           * A File ID representing an image you would like displayed on the reader.
+           * A File ID representing an image you want to display on the reader.
            */
           splashscreen?: Stripe.Emptyable<string>;
         }
@@ -763,7 +785,7 @@ declare module 'stripe' {
 
         interface StripeS700 {
           /**
-           * A File ID representing an image you would like displayed on the reader.
+           * A File ID representing an image you want to display on the reader.
            */
           splashscreen?: Stripe.Emptyable<string>;
         }
@@ -813,6 +835,11 @@ declare module 'stripe' {
            * Tipping configuration for GBP
            */
           gbp?: Tipping.Gbp;
+
+          /**
+           * Tipping configuration for GIP
+           */
+          gip?: Tipping.Gip;
 
           /**
            * Tipping configuration for HKD
@@ -1013,6 +1040,23 @@ declare module 'stripe' {
           }
 
           interface Gbp {
+            /**
+             * Fixed amounts displayed when collecting a tip
+             */
+            fixed_amounts?: Array<number>;
+
+            /**
+             * Percentages displayed when collecting a tip
+             */
+            percentages?: Array<number>;
+
+            /**
+             * Below this amount, fixed amounts will be displayed; above it, percentages will be displayed
+             */
+            smart_tip_threshold?: number;
+          }
+
+          interface Gip {
             /**
              * Fixed amounts displayed when collecting a tip
              */
@@ -1236,7 +1280,7 @@ declare module 'stripe' {
 
         interface VerifoneP400 {
           /**
-           * A File ID representing an image you would like displayed on the reader.
+           * A File ID representing an image you want to display on the reader.
            */
           splashscreen?: Stripe.Emptyable<string>;
         }

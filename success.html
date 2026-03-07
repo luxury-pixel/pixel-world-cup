@@ -1,36 +1,21 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <title>Paiement réussi — Pixel World Cup</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Paiement réussi</title>
   <style>
-    body{
-      margin:0;
-      background:#0b0c15;
-      color:#eef;
-      font-family:system-ui,Arial;
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      height:100vh;
-      flex-direction:column;
-      text-align:center;
-    }
-    h1{color:#9effb6;margin-bottom:20px;}
-    a{
-      color:#0b0c15;
-      background:#3a86ff;
-      padding:10px 16px;
-      border-radius:10px;
-      text-decoration:none;
-      font-weight:600;
-    }
-    a:hover{background:#6caeff;}
+    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui;background:#0b0c15;color:#fff}
+    .box{max-width:520px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);padding:24px;border-radius:16px;text-align:center}
+    a{display:inline-block;margin-top:12px;padding:10px 14px;background:#3a86ff;color:#061026;border-radius:10px;text-decoration:none;font-weight:700}
   </style>
 </head>
 <body>
-  <h1>✅ Paiement réussi !</h1>
-  <p>Merci pour votre achat. Vos cases ont bien été enregistrées.</p>
-  <a href="./index.html">← Retour à la grille</a>
+  <div class="box">
+    <h1>✅ Achat validé !</h1>
+    <p>Ton bloc est affiché sur la grille.</p>
+    <p><b>Astuce :</b> double-clique sur un bloc pour ouvrir le site du client.</p>
+    <a href="/">← Retour à la grille</a>
+  </div>
 </body>
 </html>
