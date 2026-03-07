@@ -2,22 +2,34 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <title>Paiement annulé — Pixel World Cup</title>
+  <title>Payment cancelled — Pixel World Cup</title>
   <style>
     body{
       margin:0;
       background:#0b0c15;
       color:#eef;
-      font-family:system-ui,Arial;
+      font-family:system-ui,Arial,sans-serif;
       display:flex;
       justify-content:center;
       align-items:center;
-      height:100vh;
+      min-height:100vh;
       flex-direction:column;
       text-align:center;
+      padding:20px;
+      box-sizing:border-box;
+    }
+    .box{
+      max-width:520px;
+      width:100%;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.14);
+      padding:24px;
+      border-radius:16px;
     }
     h1{color:#ff9797;margin-bottom:20px;}
     a{
+      display:inline-block;
+      margin-top:12px;
       color:#0b0c15;
       background:#3a86ff;
       padding:10px 16px;
@@ -26,11 +38,95 @@
       font-weight:600;
     }
     a:hover{background:#6caeff;}
+    .langSwitch{
+      display:flex;
+      gap:6px;
+      justify-content:center;
+      margin-bottom:14px;
+    }
+    .langBtn{
+      background:#171a2b;
+      border:1px solid #2b2f4f;
+      color:#eaf1ff;
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:12px;
+      cursor:pointer;
+    }
+    .langBtn.active{
+      background:linear-gradient(180deg,#6fd1ff,#3a86ff);
+      color:#061026;
+      border-color:#2b6ad7;
+      font-weight:700;
+    }
   </style>
 </head>
 <body>
-  <h1>❌ Paiement annulé</h1>
-  <p>Le paiement n’a pas été finalisé.</p>
-  <a href="./index.html">← Retour à la grille</a>
+  <div class="box">
+    <div class="langSwitch">
+      <button id="langFr" class="langBtn" type="button">FR</button>
+      <button id="langEn" class="langBtn" type="button">EN</button>
+    </div>
+
+    <h1 id="title">❌ Paiement annulé</h1>
+    <p id="line1">Le paiement n’a pas été finalisé.</p>
+    <a href="./index.html" id="backLink">← Retour à la grille</a>
+  </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const translations = {
+    fr: {
+      htmlLang: "fr",
+      title: "❌ Paiement annulé",
+      line1: "Le paiement n’a pas été finalisé.",
+      back: "← Retour à la grille",
+      pageTitle: "Paiement annulé — Pixel World Cup"
+    },
+    en: {
+      htmlLang: "en",
+      title: "❌ Payment cancelled",
+      line1: "The payment was not completed.",
+      back: "← Back to the grid",
+      pageTitle: "Payment cancelled — Pixel World Cup"
+    }
+  };
+
+  function detectLang(){
+    const saved = localStorage.getItem("pwc-lang");
+    if (saved === "fr" || saved === "en") return saved;
+    return navigator.language && navigator.language.toLowerCase().startsWith("fr") ? "fr" : "en";
+  }
+
+  let currentLang = detectLang();
+
+  function applyTranslations(lang){
+    const t = translations[lang];
+    document.documentElement.lang = t.htmlLang;
+    document.title = t.pageTitle;
+
+    document.getElementById("title").textContent = t.title;
+    document.getElementById("line1").textContent = t.line1;
+    document.getElementById("backLink").textContent = t.back;
+
+    document.getElementById("langFr").classList.toggle("active", lang === "fr");
+    document.getElementById("langEn").classList.toggle("active", lang === "en");
+  }
+
+  document.getElementById("langFr").addEventListener("click", () => {
+    currentLang = "fr";
+    localStorage.setItem("pwc-lang", currentLang);
+    applyTranslations(currentLang);
+  });
+
+  document.getElementById("langEn").addEventListener("click", () => {
+    currentLang = "en";
+    localStorage.setItem("pwc-lang", currentLang);
+    applyTranslations(currentLang);
+  });
+
+  applyTranslations(currentLang);
+});
+</script>
 </body>
 </html>
