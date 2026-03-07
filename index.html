@@ -35,7 +35,7 @@
       background:linear-gradient(90deg,#00ffd0,#ffe08a);
       -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
     }
-    .stats{display:flex;gap:10px;flex-wrap:wrap}
+    .stats{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     .pill{
       background:rgba(255,255,255,.06);
       border:1px solid rgba(255,255,255,.14);
@@ -43,6 +43,18 @@
       font-size:13px;color:#dbe6ff;
     }
     .countdown{color:#ffe08a;font-weight:700}
+    .langSwitch{
+      display:flex; gap:6px; align-items:center;
+      margin-left:4px;
+    }
+    .langBtn{
+      background:#171a2b;border:1px solid #2b2f4f;color:#eaf1ff;
+      padding:6px 9px;border-radius:999px;font-size:12px;cursor:pointer;
+    }
+    .langBtn.active{
+      background:linear-gradient(180deg,#6fd1ff,#3a86ff);
+      color:#061026;border-color:#2b6ad7;font-weight:700;
+    }
 
     .toolbar{display:flex;gap:10px;align-items:center;padding:12px 0 4px;flex-wrap:wrap;}
     .btn{
@@ -124,17 +136,21 @@
   <div class="topbar">
     <div class="brand"><div class="logo"></div><h1>Pixel World Cup</h1></div>
     <div class="stats">
-      <span class="pill">Total : <b>10 000</b></span>
-      <span class="pill">Vendues : <b id="soldCount">0</b></span>
-      <span class="pill">Disponibles : <b id="freeCount">10 000</b></span>
-      <span class="pill countdown">Fin : <b id="countdown">—</b></span>
-      <a class="pill" href="/about">Comment ça marche ?</a>
+      <span class="pill"><span id="totalLabel">Total</span> : <b>10 000</b></span>
+      <span class="pill"><span id="soldLabel">Vendues</span> : <b id="soldCount">0</b></span>
+      <span class="pill"><span id="freeLabel">Disponibles</span> : <b id="freeCount">10 000</b></span>
+      <span class="pill countdown"><span id="endLabel">Fin</span> : <b id="countdown">—</b></span>
+      <a class="pill" href="/about" id="howLink">Comment ça marche ?</a>
+      <div class="langSwitch">
+        <button id="langFr" class="langBtn" type="button">FR</button>
+        <button id="langEn" class="langBtn" type="button">EN</button>
+      </div>
     </div>
   </div>
   <div class="toolbar">
     <button id="buyBtn" class="btn primary" disabled>Acheter mes cases</button>
     <button id="clearSelBtn" class="btn">Désélectionner</button>
-    <label>Zoom <input id="zoom" class="range" type="range" min="10" max="24" step="1" value="14"/></label>
+    <label><span id="zoomLabel">Zoom</span> <input id="zoom" class="range" type="range" min="10" max="24" step="1" value="14"/></label>
   </div>
 </header>
 
@@ -149,30 +165,29 @@
 
 <div id="modalWrap" class="modalWrap">
   <div class="modal">
-    <h3>Finaliser l’achat</h3>
+    <h3 id="checkoutTitle">Finaliser l’achat</h3>
 
-    <div class="row"><label>Votre nom</label><input id="mName" placeholder="Nom affiché publiquement"/></div>
-    <div class="row"><label>Email</label><input id="mEmail" type="email" placeholder="ton.email@example.com"/></div>
+    <div class="row"><label id="nameLabel">Votre nom</label><input id="mName" placeholder="Nom affiché publiquement"/></div>
+    <div class="row"><label id="emailLabel">Email</label><input id="mEmail" type="email" placeholder="ton.email@example.com"/></div>
 
     <div class="row">
-      <label>URL</label>
-      <input id="mLink" placeholder="[https://exemple.com"/]https://exemple.com"/>
+      <label id="urlLabel">URL</label>
+      <input id="mLink" placeholder="[https://example.com"/]https://example.com"/>
     </div>
 
-    <div class="row"><label>Couleur</label><input id="mColor" type="color" value="#1e90ff"/></div>
+    <div class="row"><label id="colorLabel">Couleur</label><input id="mColor" type="color" value="#1e90ff"/></div>
 
-    <!-- Upload fichier -->
     <div class="row">
-      <label>Image / Logo</label>
+      <label id="imageLabel">Image / Logo</label>
       <input id="mLogoFile" type="file" accept="image/png,image/jpeg,image/webp"/>
     </div>
-    <div class="smallNote">Formats acceptés : PNG, JPG/JPEG, WEBP — max 8 MB</div>
+    <div class="smallNote" id="imageFormatsNote">Formats acceptés : PNG, JPG/JPEG, WEBP — max 8 MB</div>
     <div id="uploadStatus"></div>
 
-    <div class="row"><label>Message</label><textarea id="mMsg" rows="2" placeholder="Petit message optionnel…"></textarea></div>
+    <div class="row"><label id="messageLabel">Message</label><textarea id="mMsg" rows="2" placeholder="Petit message optionnel…"></textarea></div>
 
     <div class="muted">
-      Cases sélectionnées : <b id="selCount">0</b> — Total : <span class="priceTag" id="totalPrice">0 €</span>
+      <span id="selectedCasesLabel">Cases sélectionnées</span> : <b id="selCount">0</b> — <span id="totalPriceLabel">Total</span> : <span class="priceTag" id="totalPrice">0 €</span>
       <div id="lotRule" class="muted"></div>
     </div>
 
@@ -199,6 +214,154 @@
 })();
 
 document.addEventListener("DOMContentLoaded", () => {
+  const translations = {
+    fr: {
+      total: "Total",
+      sold: "Vendues",
+      free: "Disponibles",
+      end: "Fin",
+      how: "Comment ça marche ?",
+      buy: "Acheter mes cases",
+      clear: "Désélectionner",
+      zoom: "Zoom",
+      checkout: "Finaliser l’achat",
+      name: "Votre nom",
+      namePlaceholder: "Nom affiché publiquement",
+      email: "Email",
+      emailPlaceholder: "ton.email@example.com",
+      url: "URL",
+      urlPlaceholder: "https://exemple.com",
+      color: "Couleur",
+      image: "Image / Logo",
+      imageFormats: "Formats acceptés : PNG, JPG/JPEG, WEBP — max 8 MB",
+      message: "Message",
+      messagePlaceholder: "Petit message optionnel…",
+      selectedCases: "Cases sélectionnées",
+      totalPrice: "Total",
+      cancel: "Annuler",
+      confirm: "Confirmer & Payer",
+      competitionEnded: "Compétition terminée.",
+      selectCases: "Sélectionne des cases.",
+      enterEmail: "Mets ton email.",
+      enterEmailForQuote: "Entre ton email",
+      quoteCalculating: "Calcul…",
+      quoteError: "Erreur devis",
+      quoteRejected: "Devis refusé",
+      rulePrefix: "Règle : ",
+      uploadLoading: "⏳ Upload de l’image…",
+      uploadDone: "✅ Image téléversée",
+      uploadError: "Erreur upload image",
+      paymentError: "Erreur paiement",
+      noEmailWarning: "Merci de mettre ton email.",
+      loadingZero: "0 €",
+      countdownEnded: "Terminé",
+      lotRuleError: "Erreur lot"
+    },
+    en: {
+      total: "Total",
+      sold: "Sold",
+      free: "Available",
+      end: "Ends",
+      how: "How does it work?",
+      buy: "Buy my pixels",
+      clear: "Clear selection",
+      zoom: "Zoom",
+      checkout: "Complete purchase",
+      name: "Your name",
+      namePlaceholder: "Public display name",
+      email: "Email",
+      emailPlaceholder: "your.email@example.com",
+      url: "URL",
+      urlPlaceholder: "https://example.com",
+      color: "Color",
+      image: "Image / Logo",
+      imageFormats: "Accepted formats: PNG, JPG/JPEG, WEBP — max 8 MB",
+      message: "Message",
+      messagePlaceholder: "Optional short message…",
+      selectedCases: "Selected cells",
+      totalPrice: "Total",
+      cancel: "Cancel",
+      confirm: "Confirm & Pay",
+      competitionEnded: "Competition ended.",
+      selectCases: "Select some cells.",
+      enterEmail: "Enter your email.",
+      enterEmailForQuote: "Enter your email",
+      quoteCalculating: "Calculating…",
+      quoteError: "Quote error",
+      quoteRejected: "Quote rejected",
+      rulePrefix: "Rule: ",
+      uploadLoading: "⏳ Uploading image…",
+      uploadDone: "✅ Image uploaded",
+      uploadError: "Image upload error",
+      paymentError: "Payment error",
+      noEmailWarning: "Please enter your email.",
+      loadingZero: "€0.00",
+      countdownEnded: "Ended",
+      lotRuleError: "Lot rule error"
+    }
+  };
+
+  function detectLang(){
+    const saved = localStorage.getItem("pwc-lang");
+    if (saved === "fr" || saved === "en") return saved;
+    return navigator.language && navigator.language.toLowerCase().startsWith("fr") ? "fr" : "en";
+  }
+
+  let currentLang = detectLang();
+  let t = translations[currentLang];
+
+  function tr(key){
+    return t[key] || key;
+  }
+
+  function applyTranslations(){
+    t = translations[currentLang];
+    document.documentElement.lang = currentLang;
+
+    document.getElementById("totalLabel").textContent = tr("total");
+    document.getElementById("soldLabel").textContent = tr("sold");
+    document.getElementById("freeLabel").textContent = tr("free");
+    document.getElementById("endLabel").textContent = tr("end");
+    document.getElementById("howLink").textContent = tr("how");
+    document.getElementById("buyBtn").textContent = tr("buy");
+    document.getElementById("clearSelBtn").textContent = tr("clear");
+    document.getElementById("zoomLabel").textContent = tr("zoom");
+    document.getElementById("checkoutTitle").textContent = tr("checkout");
+    document.getElementById("nameLabel").textContent = tr("name");
+    document.getElementById("emailLabel").textContent = tr("email");
+    document.getElementById("urlLabel").textContent = tr("url");
+    document.getElementById("colorLabel").textContent = tr("color");
+    document.getElementById("imageLabel").textContent = tr("image");
+    document.getElementById("imageFormatsNote").textContent = tr("imageFormats");
+    document.getElementById("messageLabel").textContent = tr("message");
+    document.getElementById("selectedCasesLabel").textContent = tr("selectedCases");
+    document.getElementById("totalPriceLabel").textContent = tr("totalPrice");
+    document.getElementById("cancelBuy").textContent = tr("cancel");
+    document.getElementById("confirmStripe").textContent = tr("confirm");
+
+    document.getElementById("mName").placeholder = tr("namePlaceholder");
+    document.getElementById("mEmail").placeholder = tr("emailPlaceholder");
+    document.getElementById("mLink").placeholder = tr("urlPlaceholder");
+    document.getElementById("mMsg").placeholder = tr("messagePlaceholder");
+
+    document.getElementById("langFr").classList.toggle("active", currentLang === "fr");
+    document.getElementById("langEn").classList.toggle("active", currentLang === "en");
+
+    updateUI(false);
+  }
+
+  document.getElementById("langFr").addEventListener("click", ()=>{
+    currentLang = "fr";
+    localStorage.setItem("pwc-lang", currentLang);
+    applyTranslations();
+  });
+
+  document.getElementById("langEn").addEventListener("click", ()=>{
+    currentLang = "en";
+    localStorage.setItem("pwc-lang", currentLang);
+    applyTranslations();
+  });
+
   const COLS=100, ROWS=100, TOTAL=COLS*ROWS;
   const DEADLINE = new Date('2026-12-31T23:59:59+01:00');
 
@@ -338,14 +501,14 @@ document.addEventListener("DOMContentLoaded", () => {
   function updateUI(resetPrice){
     const sold = (LAST_GRID_DATA && LAST_GRID_DATA.cells)
       ? Object.keys(LAST_GRID_DATA.cells).length : 0;
-    soldEl.textContent = sold.toLocaleString('fr-FR');
-    freeEl.textContent = (TOTAL - sold).toLocaleString('fr-FR');
+    soldEl.textContent = sold.toLocaleString(currentLang === "fr" ? "fr-FR" : "en-US");
+    freeEl.textContent = (TOTAL - sold).toLocaleString(currentLang === "fr" ? "fr-FR" : "en-US");
 
     const qty = selection.size;
     selCountEl.textContent = qty;
 
     if (resetPrice) {
-      totalPriceEl.textContent = qty ? 'Calcul…' : '0 €';
+      totalPriceEl.textContent = qty ? tr("quoteCalculating") : tr("loadingZero");
       lotRuleEl.textContent = '';
       confirmBtn.disabled = true;
     }
@@ -356,7 +519,7 @@ document.addEventListener("DOMContentLoaded", () => {
   (function tick(){
     const ms = DEADLINE - new Date();
     if (ms <= 0) {
-      countdownEl.textContent = 'Terminé';
+      countdownEl.textContent = tr("countdownEnded");
       buyBtn.disabled = true;
       return;
     }
@@ -371,12 +534,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   buyBtn.addEventListener('click', async ()=>{
     if(selection.size===0) return;
-    if(new Date()>=DEADLINE){ alert('Compétition terminée.'); return; }
+    if(new Date()>=DEADLINE){ alert(tr('competitionEnded')); return; }
     await refreshQuoteInModal();
     modalWrap.style.display='flex';
   });
 
-  document.getElementById('cancelBuy').addEventListener('click', ()=> {
+  document.getElementById('cancelBuy').addEventListener('click', ()=>{
     modalWrap.style.display='none';
   });
 
@@ -407,7 +570,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return "";
     }
 
-    uploadStatus.textContent = "⏳ Upload de l’image…";
+    uploadStatus.textContent = tr("uploadLoading");
 
     const formData = new FormData();
     formData.append("image", file);
@@ -420,11 +583,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const data = await r.json().catch(() => ({}));
 
     if (!r.ok || !data.ok || !data.url) {
-      throw new Error(data.error || "Erreur upload image");
+      throw new Error(data.error || tr("uploadError"));
     }
 
     uploadedLogoUrl = data.url;
-    uploadStatus.textContent = "✅ Image téléversée";
+    uploadStatus.textContent = tr("uploadDone");
     return uploadedLogoUrl;
   }
 
@@ -548,7 +711,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const buyerEmail=(mEmail.value||'').trim();
       if(!buyerEmail){
-        totalPriceEl.textContent='Entre ton email';
+        totalPriceEl.textContent = tr('enterEmailForQuote');
         confirmBtn.disabled=true;
         return;
       }
@@ -558,15 +721,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if(!q.ok){
         totalPriceEl.textContent='—';
-        lotRuleEl.textContent = q.data?.lotRule ? ('Règle : ' + q.data.lotRule)
-                                              : (q.data?.error || 'Erreur devis');
+        lotRuleEl.textContent = q.data?.lotRule ? (tr('rulePrefix') + q.data.lotRule)
+                                                : (q.data?.error || tr('quoteError'));
         confirmBtn.disabled=true;
         return;
       }
 
       const euros = (q.data.totalCents||0)/100;
-      totalPriceEl.textContent = euros.toLocaleString('fr-FR',{style:'currency',currency:'EUR'});
-      lotRuleEl.textContent = q.data?.lotRule ? ('Règle : ' + q.data.lotRule) : '';
+      totalPriceEl.textContent = euros.toLocaleString(
+        currentLang === "fr" ? "fr-FR" : "en-US",
+        { style:'currency', currency:'EUR' }
+      );
+      lotRuleEl.textContent = q.data?.lotRule ? (tr('rulePrefix') + q.data.lotRule) : '';
       confirmBtn.disabled=false;
     }catch(e){
       totalPriceEl.textContent='—';
@@ -578,17 +744,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   confirmBtn.addEventListener('click', async ()=>{
     const rect = currentRect();
-    if(!rect){ alert('Sélectionne des cases.'); return; }
-    if(new Date()>=DEADLINE){ alert('Compétition terminée.'); return; }
+    if(!rect){ alert(tr('selectCases')); return; }
+    if(new Date()>=DEADLINE){ alert(tr('competitionEnded')); return; }
 
     const buyerEmail=(mEmail.value||'').trim();
-    if(!buyerEmail){ alert('Mets ton email.'); return; }
+    if(!buyerEmail){ alert(tr('enterEmail')); return; }
 
     let logoUrl = "";
     try {
       logoUrl = await uploadImageIfNeeded();
     } catch (e) {
-      alert(e.message || "Erreur upload image");
+      alert(e.message || tr("uploadError"));
       return;
     }
 
@@ -600,10 +766,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const body = { ...rect, buyerEmail, name, link, logo: logoUrl, color, msg };
 
     const q = await postJSON(`${API_BASE}/api/purchase-rect/quote`, body);
-    if(!q.ok){ alert(q.data?.lotRule || q.data?.error || 'Devis refusé'); return; }
+    if(!q.ok){ alert(q.data?.lotRule || q.data?.error || tr('quoteRejected')); return; }
 
     const r = await postJSON(`${API_BASE}/api/purchase-rect/checkout`, body);
-    if(!r.ok || !r.data?.ok){ alert(r.data?.error || 'Erreur paiement'); return; }
+    if(!r.ok || !r.data?.ok){ alert(r.data?.error || tr('paymentError')); return; }
 
     window.location.href = r.data.url;
   });
@@ -614,6 +780,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   setInterval(loadGridState, 20000);
 
+  applyTranslations();
   updateUI(true);
 });
 </script>
