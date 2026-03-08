@@ -3,205 +3,260 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>About — Pixel World Cup</title>
+<title>À propos — Pixel World Cup</title>
+
 <style>
-  body{
-    margin:0;
-    font-family:Inter,system-ui,Arial,sans-serif;
-    color:#eef;
-    background:
-      radial-gradient(1000px 500px at 20% -10%, #3a2df0 0%, transparent 55%),
-      radial-gradient(800px 400px at 90% 0%, #f02ddd 0%, transparent 50%),
-      #0b0c15;
-  }
-  header,main,footer{max-width:980px; margin:auto; padding:18px}
-  header{
-    border-bottom:1px solid rgba(255,255,255,.1);
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:12px;
-    flex-wrap:wrap;
-  }
-  a{color:#7bd3ff; text-decoration:none}
-  a:hover{text-decoration:underline}
-  h1{
-    font-size: clamp(26px,4vw,42px);
-    background: linear-gradient(90deg,#00ffd0,#ffe08a);
-    -webkit-background-clip:text;
-    background-clip:text;
-    -webkit-text-fill-color:transparent;
-    margin:.6em 0 .2em;
-  }
-  .card{
-    background:rgba(255,255,255,.06);
-    border:1px solid rgba(255,255,255,.14);
-    border-radius:14px;
-    padding:16px;
-    margin:14px 0;
-  }
-  .grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
-    gap:14px;
-  }
-  .cta{
-    display:inline-block;
-    background:linear-gradient(180deg,#6fd1ff,#3a86ff);
-    color:#061026;
-    padding:10px 16px;
-    border-radius:10px;
-    font-weight:700;
-  }
-  footer{
-    border-top:1px solid rgba(255,255,255,.1);
-    color:#bcd1ff;
-    text-align:center;
-  }
-  .langSwitch{
-    display:flex;
-    gap:6px;
-    align-items:center;
-  }
-  .langBtn{
-    background:#171a2b;
-    border:1px solid #2b2f4f;
-    color:#eaf1ff;
-    padding:6px 10px;
-    border-radius:999px;
-    font-size:12px;
-    cursor:pointer;
-  }
-  .langBtn.active{
-    background:linear-gradient(180deg,#6fd1ff,#3a86ff);
-    color:#061026;
-    border-color:#2b6ad7;
-    font-weight:700;
-  }
+
+body{
+margin:0;
+font-family:Inter,system-ui,Arial,sans-serif;
+color:#eef;
+
+background:
+radial-gradient(1000px 500px at 20% -10%, #3a2df0 0%, transparent 55%),
+radial-gradient(800px 400px at 90% 0%, #f02ddd 0%, transparent 50%),
+#0b0c15;
+}
+
+header,main,footer{
+max-width:980px;
+margin:auto;
+padding:18px;
+}
+
+header{
+border-bottom:1px solid rgba(255,255,255,.1);
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+a{
+color:#7bd3ff;
+text-decoration:none
+}
+
+a:hover{
+text-decoration:underline
+}
+
+h1{
+font-size: clamp(26px,4vw,42px);
+background: linear-gradient(90deg,#00ffd0,#ffe08a);
+-webkit-background-clip:text;
+background-clip:text;
+-webkit-text-fill-color:transparent;
+margin:.6em 0 .2em;
+}
+
+.card{
+background:rgba(255,255,255,.06);
+border:1px solid rgba(255,255,255,.14);
+border-radius:14px;
+padding:16px;
+margin:14px 0
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+gap:14px
+}
+
+.cta{
+display:inline-block;
+background:linear-gradient(180deg,#6fd1ff,#3a86ff);
+color:#061026;
+padding:10px 16px;
+border-radius:10px;
+font-weight:700
+}
+
+footer{
+border-top:1px solid rgba(255,255,255,.1);
+color:#bcd1ff;
+text-align:center
+}
+
+.lang{
+display:flex;
+gap:8px;
+}
+
+.lang button{
+background:#171a2b;
+border:1px solid #2b2f4f;
+color:#eaf1ff;
+padding:6px 10px;
+border-radius:8px;
+cursor:pointer;
+}
+
+.lang button.active{
+background:#3a86ff;
+color:#061026;
+font-weight:700;
+}
+
 </style>
 </head>
+
 <body>
-  <header>
-    <a href="./index.html" id="backLink">← Retour à la grille</a>
-    <div class="langSwitch">
-      <button id="langFr" class="langBtn" type="button">FR</button>
-      <button id="langEn" class="langBtn" type="button">EN</button>
-    </div>
-  </header>
 
-  <main>
-    <h1 id="pageTitle">Comment ça marche ?</h1>
+<header>
 
-    <section class="grid">
-      <div class="card">
-        <h3 id="step1Title">1) Achetez des cases</h3>
-        <p id="step1Text">Cliquez sur une case (ou glissez pour un bloc), puis “Acheter mes cases”.</p>
-      </div>
+<a href="./index.html">← Retour à la grille</a>
 
-      <div class="card">
-        <h3 id="step2Title">2) Personnalisez</h3>
-        <p id="step2Text">Couleur, lien, logo, message. Vos cases deviennent cliquables.</p>
-      </div>
+<div class="lang">
+<button id="frBtn">FR</button>
+<button id="enBtn">EN</button>
+</div>
 
-      <div class="card">
-        <h3 id="step3Title">3) Revente dynamique</h3>
-        <p id="step3Text">À chaque revente, le prix double. L’ancien propriétaire reçoit <b>1,3×</b> sa mise.</p>
-      </div>
-    </section>
+</header>
 
-    <div class="card">
-      <h3 id="deadlineTitle">Fin de la compétition</h3>
-      <p id="deadlineText">Clôture le <b>31/12/2026 à 23:59</b> (Europe/Brussels). Après cette date, plus aucun achat n’est possible et la grille est figée.</p>
-      <p><small id="demoNote">Version en ligne avec Stripe + stockage des achats.</small></p>
-    </div>
+<main>
 
-    <p><a class="cta" href="./index.html" id="ctaLink">Aller à la grille</a></p>
-  </main>
+<h1 id="title">Comment ça marche ?</h1>
 
-  <footer id="footerText">© 2026 Pixel World Cup</footer>
+<section class="grid">
+
+<div class="card">
+<h3 id="step1Title">1) Achetez des cases</h3>
+<p id="step1Text">
+Cliquez sur une case ou sélectionnez un bloc complet,
+puis cliquez sur “Acheter mes cases”.
+</p>
+</div>
+
+<div class="card">
+<h3 id="step2Title">2) Personnalisez votre bloc</h3>
+<p id="step2Text">
+Ajoutez une couleur, un lien, un logo ou même un GIF animé.
+Votre bloc devient cliquable sur la grille.
+</p>
+</div>
+
+<div class="card">
+<h3 id="step3Title">3) Revente dynamique</h3>
+<p id="step3Text">
+À chaque revente, le prix du bloc double.
+L’ancien propriétaire reçoit <b>1,3×</b> sa mise initiale.
+</p>
+</div>
+
+</section>
+
+<div class="card">
+
+<h3 id="endTitle">Fin de la compétition</h3>
+
+<p id="endText">
+La compétition se termine le
+<b>31 décembre 2026 à 23:59 (Europe/Brussels)</b>.
+Après cette date, la grille devient permanente et aucun achat n’est possible.
+</p>
+
+</div>
+
+<p>
+<a class="cta" href="./index.html" id="cta">
+Aller à la grille
+</a>
+</p>
+
+</main>
+
+<footer>
+
+© 2026 Pixel World Cup
+
+</footer>
+
 
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-  const translations = {
-    fr: {
-      title: "Comment ça marche ?",
-      back: "← Retour à la grille",
-      step1Title: "1) Achetez des cases",
-      step1Text: "Cliquez sur une case (ou glissez pour un bloc), puis “Acheter mes cases”.",
-      step2Title: "2) Personnalisez",
-      step2Text: "Couleur, lien, logo, message. Vos cases deviennent cliquables.",
-      step3Title: "3) Revente dynamique",
-      step3Text: "À chaque revente, le prix double. L’ancien propriétaire reçoit <b>1,3×</b> sa mise.",
-      deadlineTitle: "Fin de la compétition",
-      deadlineText: "Clôture le <b>31/12/2026 à 23:59</b> (Europe/Brussels). Après cette date, plus aucun achat n’est possible et la grille est figée.",
-      demoNote: "Version en ligne avec Stripe + stockage des achats.",
-      cta: "Aller à la grille",
-      footer: "© 2026 Pixel World Cup",
-      htmlLang: "fr"
-    },
-    en: {
-      title: "How does it work?",
-      back: "← Back to the grid",
-      step1Title: "1) Buy pixels",
-      step1Text: "Click one cell (or drag to select a block), then click “Buy my pixels”.",
-      step2Title: "2) Customize",
-      step2Text: "Color, link, logo, message. Your cells become clickable.",
-      step3Title: "3) Dynamic resale",
-      step3Text: "At each resale, the price doubles. The previous owner receives <b>1.3×</b> their original price.",
-      deadlineTitle: "Competition deadline",
-      deadlineText: "Ends on <b>12/31/2026 at 23:59</b> (Europe/Brussels). After that date, no further purchases are possible and the grid is frozen.",
-      demoNote: "Live version with Stripe + purchase storage.",
-      cta: "Go to the grid",
-      footer: "© 2026 Pixel World Cup",
-      htmlLang: "en"
-    }
-  };
 
-  function detectLang(){
-    const saved = localStorage.getItem("pwc-lang");
-    if (saved === "fr" || saved === "en") return saved;
-    return navigator.language && navigator.language.toLowerCase().startsWith("fr") ? "fr" : "en";
-  }
+const texts = {
 
-  let currentLang = detectLang();
+fr:{
+title:"Comment ça marche ?",
+step1Title:"1) Achetez des cases",
+step1Text:"Cliquez sur une case ou sélectionnez un bloc complet, puis cliquez sur “Acheter mes cases”.",
 
-  function applyTranslations(lang){
-    const t = translations[lang];
-    document.documentElement.lang = t.htmlLang;
-    document.title = lang === "fr" ? "À propos — Pixel World Cup" : "About — Pixel World Cup";
+step2Title:"2) Personnalisez votre bloc",
+step2Text:"Ajoutez une couleur, un lien, un logo ou même un GIF animé. Votre bloc devient cliquable sur la grille.",
 
-    document.getElementById("backLink").textContent = t.back;
-    document.getElementById("pageTitle").textContent = t.title;
-    document.getElementById("step1Title").textContent = t.step1Title;
-    document.getElementById("step1Text").textContent = t.step1Text;
-    document.getElementById("step2Title").textContent = t.step2Title;
-    document.getElementById("step2Text").textContent = t.step2Text;
-    document.getElementById("step3Title").textContent = t.step3Title;
-    document.getElementById("step3Text").innerHTML = t.step3Text;
-    document.getElementById("deadlineTitle").textContent = t.deadlineTitle;
-    document.getElementById("deadlineText").innerHTML = t.deadlineText;
-    document.getElementById("demoNote").textContent = t.demoNote;
-    document.getElementById("ctaLink").textContent = t.cta;
-    document.getElementById("footerText").textContent = t.footer;
+step3Title:"3) Revente dynamique",
+step3Text:"À chaque revente, le prix du bloc double. L’ancien propriétaire reçoit 1,3× sa mise.",
 
-    document.getElementById("langFr").classList.toggle("active", lang === "fr");
-    document.getElementById("langEn").classList.toggle("active", lang === "en");
-  }
+endTitle:"Fin de la compétition",
+endText:"La compétition se termine le 31 décembre 2026 à 23:59 (Europe/Brussels). Après cette date la grille devient permanente.",
 
-  document.getElementById("langFr").addEventListener("click", () => {
-    currentLang = "fr";
-    localStorage.setItem("pwc-lang", currentLang);
-    applyTranslations(currentLang);
-  });
+cta:"Aller à la grille",
 
-  document.getElementById("langEn").addEventListener("click", () => {
-    currentLang = "en";
-    localStorage.setItem("pwc-lang", currentLang);
-    applyTranslations(currentLang);
-  });
+back:"← Retour à la grille"
+},
 
-  applyTranslations(currentLang);
-});
+en:{
+title:"How does it work?",
+step1Title:"1) Buy pixels",
+step1Text:"Click a cell or select a block, then click 'Buy my pixels'.",
+
+step2Title:"2) Customize your block",
+step2Text:"Add a color, link, logo or even an animated GIF. Your block becomes clickable on the grid.",
+
+step3Title:"3) Dynamic resale",
+step3Text:"Each resale doubles the block price. The previous owner receives 1.3× their investment.",
+
+endTitle:"Competition end",
+endText:"The competition ends on December 31st 2026 at 23:59 (Europe/Brussels). After that the grid becomes permanent.",
+
+cta:"Go to the grid",
+
+back:"← Back to grid"
+}
+
+}
+
+
+function setLang(lang){
+
+const t = texts[lang]
+
+document.documentElement.lang = lang
+
+document.getElementById("title").textContent = t.title
+
+document.getElementById("step1Title").textContent = t.step1Title
+document.getElementById("step1Text").textContent = t.step1Text
+
+document.getElementById("step2Title").textContent = t.step2Title
+document.getElementById("step2Text").textContent = t.step2Text
+
+document.getElementById("step3Title").textContent = t.step3Title
+document.getElementById("step3Text").textContent = t.step3Text
+
+document.getElementById("endTitle").textContent = t.endTitle
+document.getElementById("endText").textContent = t.endText
+
+document.getElementById("cta").textContent = t.cta
+
+document.querySelector("header a").textContent = t.back
+
+localStorage.setItem("pwcLang",lang)
+
+document.getElementById("frBtn").classList.toggle("active",lang==="fr")
+document.getElementById("enBtn").classList.toggle("active",lang==="en")
+
+}
+
+document.getElementById("frBtn").onclick = ()=>setLang("fr")
+document.getElementById("enBtn").onclick = ()=>setLang("en")
+
+const saved = localStorage.getItem("pwcLang") || "fr"
+
+setLang(saved)
+
 </script>
+
 </body>
 </html>
