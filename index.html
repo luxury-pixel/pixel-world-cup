@@ -56,7 +56,9 @@
       color:#061026;border-color:#2b6ad7;font-weight:700;
     }
 
-    .toolbar{display:flex;gap:10px;align-items:center;padding:12px 0 4px;flex-wrap:wrap;}
+    .toolbar{
+      display:flex;gap:10px;align-items:center;padding:12px 0 4px;flex-wrap:wrap;
+    }
     .btn{
       background:#171a2b;border:1px solid #2b2f4f;color:#eaf1ff;
       padding:9px 12px;border-radius:10px;font-size:14px;cursor:pointer;
@@ -68,6 +70,45 @@
     }
     .btn:disabled{opacity:.45;cursor:not-allowed}
     .range{accent-color:#79f}
+
+    .viralBar{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      padding-top:10px;
+    }
+    .viralCard{
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:14px;
+      padding:12px 14px;
+      min-width:180px;
+    }
+    .viralCard strong{
+      display:block;
+      font-size:12px;
+      color:#bcd1ff;
+      margin-bottom:6px;
+      font-weight:600;
+    }
+    .viralValue{
+      font-size:20px;
+      font-weight:800;
+      color:#9effb6;
+    }
+    .latestSales{
+      min-width:280px;
+      flex:1;
+    }
+    .latestSales ul{
+      margin:6px 0 0;
+      padding-left:18px;
+      color:#dbe6ff;
+      font-size:13px;
+    }
+    .latestSales li{
+      margin:4px 0;
+    }
 
     #stage{flex:1;padding:18px;}
     #gridWrap{
@@ -147,10 +188,30 @@
       </div>
     </div>
   </div>
+
   <div class="toolbar">
     <button id="buyBtn" class="btn primary" disabled>Acheter mes cases</button>
     <button id="clearSelBtn" class="btn">Désélectionner</button>
     <label><span id="zoomLabel">Zoom</span> <input id="zoom" class="range" type="range" min="10" max="24" step="1" value="14"/></label>
+  </div>
+
+  <div class="viralBar">
+    <div class="viralCard">
+      <strong id="generatedLabel">Total généré</strong>
+      <div class="viralValue" id="totalMoney">0 €</div>
+    </div>
+
+    <div class="viralCard">
+      <strong id="highestLabel">Pixel le plus cher</strong>
+      <div class="viralValue" id="highestPixel">0 €</div>
+    </div>
+
+    <div class="viralCard latestSales">
+      <strong id="latestSalesLabel">Derniers achats</strong>
+      <ul id="latestSalesList">
+        <li>—</li>
+      </ul>
+    </div>
   </div>
 </header>
 
@@ -224,6 +285,10 @@ document.addEventListener("DOMContentLoaded", () => {
       buy: "Acheter mes cases",
       clear: "Désélectionner",
       zoom: "Zoom",
+      generated: "Total généré",
+      highest: "Pixel le plus cher",
+      latestSales: "Derniers achats",
+      anonymous: "Anonyme",
       checkout: "Finaliser l’achat",
       name: "Votre nom",
       namePlaceholder: "Nom affiché publiquement",
@@ -253,7 +318,8 @@ document.addEventListener("DOMContentLoaded", () => {
       uploadError: "Erreur upload image",
       paymentError: "Erreur paiement",
       loadingZero: "0 €",
-      countdownEnded: "Terminé"
+      countdownEnded: "Terminé",
+      noSales: "Aucun achat pour le moment"
     },
     en: {
       total: "Total",
@@ -264,6 +330,10 @@ document.addEventListener("DOMContentLoaded", () => {
       buy: "Buy my pixels",
       clear: "Clear selection",
       zoom: "Zoom",
+      generated: "Total generated",
+      highest: "Highest pixel",
+      latestSales: "Latest purchases",
+      anonymous: "Anonymous",
       checkout: "Complete purchase",
       name: "Your name",
       namePlaceholder: "Public display name",
@@ -293,7 +363,8 @@ document.addEventListener("DOMContentLoaded", () => {
       uploadError: "Image upload error",
       paymentError: "Payment error",
       loadingZero: "€0.00",
-      countdownEnded: "Ended"
+      countdownEnded: "Ended",
+      noSales: "No purchases yet"
     }
   };
 
@@ -310,6 +381,13 @@ document.addEventListener("DOMContentLoaded", () => {
     return t[key] || key;
   }
 
+  function formatMoney(cents){
+    return (cents / 100).toLocaleString(
+      currentLang === "fr" ? "fr-FR" : "en-US",
+      { style:'currency', currency:'EUR' }
+    );
+  }
+
   function applyTranslations(){
     t = translations[currentLang];
     document.documentElement.lang = currentLang;
@@ -322,6 +400,9 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("buyBtn").textContent = tr("buy");
     document.getElementById("clearSelBtn").textContent = tr("clear");
     document.getElementById("zoomLabel").textContent = tr("zoom");
+    document.getElementById("generatedLabel").textContent = tr("generated");
+    document.getElementById("highestLabel").textContent = tr("highest");
+    document.getElementById("latestSalesLabel").textContent = tr("latestSales");
     document.getElementById("checkoutTitle").textContent = tr("checkout");
     document.getElementById("nameLabel").textContent = tr("name");
     document.getElementById("emailLabel").textContent = tr("email");
@@ -344,6 +425,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("langEn").classList.toggle("active", currentLang === "en");
 
     updateUI(false);
+    loadStats();
   }
 
   document.getElementById("langFr").addEventListener("click", ()=>{
@@ -595,6 +677,36 @@ document.addEventListener("DOMContentLoaded", () => {
     }catch(e){ console.warn('loadGridState error', e); }
   }
 
+  async function loadStats(){
+    try{
+      const r = await fetch(`${API_BASE}/api/stats?ts=${Date.now()}`);
+      const data = await r.json();
+      if (!data.ok) return;
+
+      document.getElementById("totalMoney").textContent = formatMoney(data.totalCents || 0);
+      document.getElementById("highestPixel").textContent = formatMoney(data.highestCents || 0);
+
+      const list = document.getElementById("latestSalesList");
+      list.innerHTML = "";
+
+      const sales = Array.isArray(data.lastSales) ? data.lastSales : [];
+      if (!sales.length) {
+        const li = document.createElement("li");
+        li.textContent = tr("noSales");
+        list.appendChild(li);
+        return;
+      }
+
+      for (const sale of sales) {
+        const li = document.createElement("li");
+        li.textContent = `${sale.name || tr("anonymous")} — ${formatMoney(sale.priceCents || 0)}`;
+        list.appendChild(li);
+      }
+    }catch(e){
+      console.warn("loadStats error", e);
+    }
+  }
+
   function renderSoldAndLogos(data){
     LAST_GRID_DATA = data;
 
@@ -723,11 +835,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      const euros = (q.data.totalCents||0)/100;
-      totalPriceEl.textContent = euros.toLocaleString(
-        currentLang === "fr" ? "fr-FR" : "en-US",
-        { style:'currency', currency:'EUR' }
-      );
+      totalPriceEl.textContent = formatMoney(q.data.totalCents || 0);
       lotRuleEl.textContent = q.data?.lotRule ? (tr('rulePrefix') + q.data.lotRule) : '';
       confirmBtn.disabled=false;
     }catch(e){
@@ -771,10 +879,17 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   loadGridState();
+  loadStats();
+
   document.addEventListener('visibilitychange', ()=>{
-    if(!document.hidden) loadGridState();
+    if(!document.hidden) {
+      loadGridState();
+      loadStats();
+    }
   });
+
   setInterval(loadGridState, 20000);
+  setInterval(loadStats, 20000);
 
   applyTranslations();
   updateUI(true);

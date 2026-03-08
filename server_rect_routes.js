@@ -162,7 +162,6 @@ function calcRectQuote(body) {
 
   for (let yy = y; yy < y + h; yy++) {
     for (let xx = x; xx < x + w; xx++) {
-      const info = lastInfoForCell(xx, yy);
       const k = keyOf(xx, yy);
       const hist = STATE.cells[k];
       const prevSalesCount = Array.isArray(hist) ? hist.length : 0;
@@ -233,6 +232,74 @@ function fulfillRectDirect(payload) {
   saveState();
   return { ok: true };
 }
+
+// --- STATS VIRALES --------------------------------------------------------
+// Renvoie : total généré, plus gros achat, derniers achats
+router.get("/stats", (req, res) => {
+  try {
+    const cells = STATE && STATE.cells ? STATE.cells : {};
+    const groupedSales = new Map();
+
+    for (const cellKey of Object.keys(cells)) {
+      const history = Array.isArray(cells[cellKey]) ? cells[cellKey] : [];
+
+      for (const sale of history) {
+        const saleKey = [
+          sale.ts || "",
+          sale.buyerEmail || "",
+          sale.lotOriginX ?? "",
+          sale.lotOriginY ?? "",
+          sale.lotW ?? "",
+          sale.lotH ?? ""
+        ].join("|");
+
+        if (!groupedSales.has(saleKey)) {
+          groupedSales.set(saleKey, {
+            ts: sale.ts || "",
+            name: sale.name || "Anonymous",
+            buyerEmail: sale.buyerEmail || "",
+            lotOriginX: sale.lotOriginX ?? 0,
+            lotOriginY: sale.lotOriginY ?? 0,
+            lotW: sale.lotW ?? 0,
+            lotH: sale.lotH ?? 0,
+            priceCents: 0
+          });
+        }
+
+        const entry = groupedSales.get(saleKey);
+        entry.priceCents += Number(sale.priceCents || 0);
+      }
+    }
+
+    const sales = Array.from(groupedSales.values());
+
+    let totalCents = 0;
+    let highestCents = 0;
+
+    for (const sale of sales) {
+      totalCents += sale.priceCents;
+      if (sale.priceCents > highestCents) {
+        highestCents = sale.priceCents;
+      }
+    }
+
+    sales.sort((a, b) => {
+      const ta = new Date(a.ts || 0).getTime();
+      const tb = new Date(b.ts || 0).getTime();
+      return tb - ta;
+    });
+
+    return res.json({
+      ok: true,
+      totalCents,
+      highestCents,
+      lastSales: sales.slice(0, 5)
+    });
+  } catch (e) {
+    console.error("❌ stats error:", e.message);
+    return res.status(500).json({ ok: false, error: "stats_error" });
+  }
+});
 
 // --- ROUTES HTTP ----------------------------------------------------------
 
