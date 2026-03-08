@@ -179,9 +179,9 @@
 
     <div class="row">
       <label id="imageLabel">Image / Logo</label>
-      <input id="mLogoFile" type="file" accept="image/png,image/jpeg,image/webp"/>
+      <input id="mLogoFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif"/>
     </div>
-    <div class="smallNote" id="imageFormatsNote">Formats acceptés : PNG, JPG/JPEG, WEBP — max 8 MB</div>
+    <div class="smallNote" id="imageFormatsNote">Formats acceptés : PNG, JPG/JPEG, WEBP, GIF — max 8 MB</div>
     <div id="uploadStatus"></div>
 
     <div class="row"><label id="messageLabel">Message</label><textarea id="mMsg" rows="2" placeholder="Petit message optionnel…"></textarea></div>
@@ -233,7 +233,7 @@ document.addEventListener("DOMContentLoaded", () => {
       urlPlaceholder: "https://exemple.com",
       color: "Couleur",
       image: "Image / Logo",
-      imageFormats: "Formats acceptés : PNG, JPG/JPEG, WEBP — max 8 MB",
+      imageFormats: "Formats acceptés : PNG, JPG/JPEG, WEBP, GIF — max 8 MB",
       message: "Message",
       messagePlaceholder: "Petit message optionnel…",
       selectedCases: "Cases sélectionnées",
@@ -252,10 +252,8 @@ document.addEventListener("DOMContentLoaded", () => {
       uploadDone: "✅ Image téléversée",
       uploadError: "Erreur upload image",
       paymentError: "Erreur paiement",
-      noEmailWarning: "Merci de mettre ton email.",
       loadingZero: "0 €",
-      countdownEnded: "Terminé",
-      lotRuleError: "Erreur lot"
+      countdownEnded: "Terminé"
     },
     en: {
       total: "Total",
@@ -275,7 +273,7 @@ document.addEventListener("DOMContentLoaded", () => {
       urlPlaceholder: "https://example.com",
       color: "Color",
       image: "Image / Logo",
-      imageFormats: "Accepted formats: PNG, JPG/JPEG, WEBP — max 8 MB",
+      imageFormats: "Accepted formats: PNG, JPG/JPEG, WEBP, GIF — max 8 MB",
       message: "Message",
       messagePlaceholder: "Optional short message…",
       selectedCases: "Selected cells",
@@ -294,10 +292,8 @@ document.addEventListener("DOMContentLoaded", () => {
       uploadDone: "✅ Image uploaded",
       uploadError: "Image upload error",
       paymentError: "Payment error",
-      noEmailWarning: "Please enter your email.",
       loadingZero: "€0.00",
-      countdownEnded: "Ended",
-      lotRuleError: "Lot rule error"
+      countdownEnded: "Ended"
     }
   };
 

@@ -48,18 +48,18 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname || "").toLowerCase();
-    const safeExt = [".png", ".jpg", ".jpeg", ".webp"].includes(ext) ? ext : ".png";
+    const safeExt = [".png", ".jpg", ".jpeg", ".webp", ".gif"].includes(ext) ? ext : ".png";
     const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`;
     cb(null, uniqueName);
   },
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowed = ["image/png", "image/jpeg", "image/webp"];
+  const allowed = ["image/png", "image/jpeg", "image/webp", "image/gif"];
   if (allowed.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("Format non autorisé. Utilise PNG, JPG/JPEG ou WEBP."));
+    cb(new Error("Format non autorisé. Utilise PNG, JPG/JPEG, WEBP ou GIF."));
   }
 };
 
@@ -244,4 +244,3 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`✅ Serveur prêt - Port ${PORT}`);
   console.log(`➡️ Site: [http://localhost:${PORT}/`)
 });
-
