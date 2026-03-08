@@ -17,7 +17,6 @@
     }
     a{color:#7bd3ff; text-decoration:none}
     a:hover{text-decoration:underline}
-
     header{
       padding:18px 20px;
       background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.02));
@@ -43,10 +42,7 @@
       font-size:13px;color:#dbe6ff;
     }
     .countdown{color:#ffe08a;font-weight:700}
-    .langSwitch{
-      display:flex; gap:6px; align-items:center;
-      margin-left:4px;
-    }
+    .langSwitch{display:flex; gap:6px; align-items:center; margin-left:4px;}
     .langBtn{
       background:#171a2b;border:1px solid #2b2f4f;color:#eaf1ff;
       padding:6px 9px;border-radius:999px;font-size:12px;cursor:pointer;
@@ -55,10 +51,7 @@
       background:linear-gradient(180deg,#6fd1ff,#3a86ff);
       color:#061026;border-color:#2b6ad7;font-weight:700;
     }
-
-    .toolbar{
-      display:flex;gap:10px;align-items:center;padding:12px 0 4px;flex-wrap:wrap;
-    }
+    .toolbar{display:flex;gap:10px;align-items:center;padding:12px 0 4px;flex-wrap:wrap;}
     .btn{
       background:#171a2b;border:1px solid #2b2f4f;color:#eaf1ff;
       padding:9px 12px;border-radius:10px;font-size:14px;cursor:pointer;
@@ -70,13 +63,7 @@
     }
     .btn:disabled{opacity:.45;cursor:not-allowed}
     .range{accent-color:#79f}
-
-    .viralBar{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      padding-top:10px;
-    }
+    .viralBar{display:flex;gap:10px;flex-wrap:wrap;padding-top:10px;}
     .viralCard{
       background:rgba(255,255,255,.06);
       border:1px solid rgba(255,255,255,.14);
@@ -85,31 +72,17 @@
       min-width:180px;
     }
     .viralCard strong{
-      display:block;
-      font-size:12px;
-      color:#bcd1ff;
-      margin-bottom:6px;
-      font-weight:600;
+      display:block;font-size:12px;color:#bcd1ff;margin-bottom:6px;font-weight:600;
     }
-    .viralValue{
-      font-size:20px;
-      font-weight:800;
-      color:#9effb6;
-    }
-    .latestSales{
-      min-width:280px;
-      flex:1;
-    }
-    .latestSales ul{
+    .viralValue{font-size:20px;font-weight:800;color:#9effb6;}
+    .latestSales{min-width:280px;flex:1;}
+    .latestSales ul,.leaderboardList{
       margin:6px 0 0;
       padding-left:18px;
       color:#dbe6ff;
       font-size:13px;
     }
-    .latestSales li{
-      margin:4px 0;
-    }
-
+    .latestSales li,.leaderboardList li{margin:4px 0;}
     #stage{flex:1;padding:18px;}
     #gridWrap{
       margin:auto;background:rgba(255,255,255,.03);
@@ -134,18 +107,15 @@
     .cell:hover{background:#3b3f68}
     .sel{outline:1px solid #bcd1ff;}
     .sold{background:#1e223f;border-color:#535a87;cursor:default;}
-
     #selectionBox{
       position:absolute;pointer-events:none;border:2px dashed #7fb3ff;
       background:rgba(127,179,255,.15);display:none;z-index:5;
     }
-
     footer{
       padding:14px 18px;border-top:1px solid rgba(255,255,255,.08);
       text-align:center;color:#bcd1ff;
       background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);
     }
-
     .modalWrap{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:10}
     .modal{
       width:min(560px,92vw);background:#0f1224;border:1px solid #2a2e52;
@@ -209,6 +179,13 @@
     <div class="viralCard latestSales">
       <strong id="latestSalesLabel">Derniers achats</strong>
       <ul id="latestSalesList">
+        <li>—</li>
+      </ul>
+    </div>
+
+    <div class="viralCard latestSales">
+      <strong id="leaderboardLabel">Top acheteurs</strong>
+      <ul id="leaderboardList" class="leaderboardList">
         <li>—</li>
       </ul>
     </div>
@@ -288,6 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
       generated: "Total généré",
       highest: "Pixel le plus cher",
       latestSales: "Derniers achats",
+      leaderboard: "Top acheteurs",
       anonymous: "Anonyme",
       checkout: "Finaliser l’achat",
       name: "Votre nom",
@@ -319,7 +297,9 @@ document.addEventListener("DOMContentLoaded", () => {
       paymentError: "Erreur paiement",
       loadingZero: "0 €",
       countdownEnded: "Terminé",
-      noSales: "Aucun achat pour le moment"
+      noSales: "Aucun achat pour le moment",
+      noLeaderboard: "Aucun acheteur pour le moment",
+      cells: "cases"
     },
     en: {
       total: "Total",
@@ -333,6 +313,7 @@ document.addEventListener("DOMContentLoaded", () => {
       generated: "Total generated",
       highest: "Highest pixel",
       latestSales: "Latest purchases",
+      leaderboard: "Top buyers",
       anonymous: "Anonymous",
       checkout: "Complete purchase",
       name: "Your name",
@@ -364,7 +345,9 @@ document.addEventListener("DOMContentLoaded", () => {
       paymentError: "Payment error",
       loadingZero: "€0.00",
       countdownEnded: "Ended",
-      noSales: "No purchases yet"
+      noSales: "No purchases yet",
+      noLeaderboard: "No buyers yet",
+      cells: "cells"
     }
   };
 
@@ -377,9 +360,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentLang = detectLang();
   let t = translations[currentLang];
 
-  function tr(key){
-    return t[key] || key;
-  }
+  function tr(key){ return t[key] || key; }
 
   function formatMoney(cents){
     return (cents / 100).toLocaleString(
@@ -403,6 +384,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("generatedLabel").textContent = tr("generated");
     document.getElementById("highestLabel").textContent = tr("highest");
     document.getElementById("latestSalesLabel").textContent = tr("latestSales");
+    document.getElementById("leaderboardLabel").textContent = tr("leaderboard");
     document.getElementById("checkoutTitle").textContent = tr("checkout");
     document.getElementById("nameLabel").textContent = tr("name");
     document.getElementById("emailLabel").textContent = tr("email");
@@ -426,6 +408,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     updateUI(false);
     loadStats();
+    loadLeaderboard();
   }
 
   document.getElementById("langFr").addEventListener("click", ()=>{
@@ -465,8 +448,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let uploadedLogoUrl = "";
 
   const stepPx = () => {
-    const cell = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell'))||14;
-    const gap  = parseInt(getComputedStyle(grid).gap)||1;
+    const cell = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell')) || 14;
+    const gap  = parseInt(getComputedStyle(grid).gap) || 1;
     return cell + gap;
   };
 
@@ -474,62 +457,69 @@ document.addEventListener("DOMContentLoaded", () => {
     const rect = grid.getBoundingClientRect();
     const s = stepPx();
     const x = Math.floor((clientX - rect.left) / s);
-    const y = Math.floor((clientY - rect.top)  / s);
-    if (x<0 || y<0 || x>=COLS || y>=ROWS) return null;
+    const y = Math.floor((clientY - rect.top) / s);
+    if (x < 0 || y < 0 || x >= COLS || y >= ROWS) return null;
     return `${x}:${y}`;
   };
 
   (function buildGrid(){
-    const frag=document.createDocumentFragment();
-    for(let y=0;y<ROWS;y++){
-      for(let x=0;x<COLS;x++){
-        const d=document.createElement('div');
-        d.className='cell';
-        d.dataset.x=x; d.dataset.y=y;
+    const frag = document.createDocumentFragment();
+    for(let y=0; y<ROWS; y++){
+      for(let x=0; x<COLS; x++){
+        const d = document.createElement('div');
+        d.className = 'cell';
+        d.dataset.x = x;
+        d.dataset.y = y;
         frag.appendChild(d);
       }
     }
     grid.appendChild(frag);
   })();
 
-  grid.addEventListener('click', (e)=>{
+  grid.addEventListener('click', (e) => {
     const cell = e.target.closest('.cell');
     if(!cell) return;
     const id = `${cell.dataset.x}:${cell.dataset.y}`;
 
     if (e.altKey) {
       selection.clear();
-      grid.querySelectorAll('.cell.sel').forEach(n=>n.classList.remove('sel'));
+      grid.querySelectorAll('.cell.sel').forEach(n => n.classList.remove('sel'));
     }
 
-    if (selection.has(id)) { selection.delete(id); cell.classList.remove('sel'); }
-    else { selection.add(id); cell.classList.add('sel'); }
+    if (selection.has(id)) {
+      selection.delete(id);
+      cell.classList.remove('sel');
+    } else {
+      selection.add(id);
+      cell.classList.add('sel');
+    }
 
     updateUI(true);
   });
 
-  let dragging=false, startId=null;
-  gridWrap.addEventListener('mousedown',(e)=>{
+  let dragging = false, startId = null;
+  gridWrap.addEventListener('mousedown', (e) => {
     const id = idAtClientPoint(e.clientX, e.clientY);
     if (!id) return;
-    dragging = true; startId = id;
+    dragging = true;
+    startId = id;
 
     if (e.altKey) {
       selection.clear();
-      grid.querySelectorAll('.cell.sel').forEach(n=>n.classList.remove('sel'));
+      grid.querySelectorAll('.cell.sel').forEach(n => n.classList.remove('sel'));
     }
 
     const s = stepPx();
     const [sx, sy] = startId.split(':').map(Number);
-    selectionBox.style.display='block';
-    selectionBox.style.left  = (sx * s) + 'px';
-    selectionBox.style.top   = (sy * s) + 'px';
+    selectionBox.style.display = 'block';
+    selectionBox.style.left = (sx * s) + 'px';
+    selectionBox.style.top = (sy * s) + 'px';
     selectionBox.style.width = s + 'px';
-    selectionBox.style.height= s + 'px';
+    selectionBox.style.height = s + 'px';
     e.preventDefault();
   });
 
-  window.addEventListener('mousemove',(e)=>{
+  window.addEventListener('mousemove', (e) => {
     if(!dragging) return;
     const curId = idAtClientPoint(e.clientX, e.clientY);
     if(!curId) return;
@@ -540,14 +530,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const x1 = Math.min(sx, cx), x2 = Math.max(sx, cx);
     const y1 = Math.min(sy, cy), y2 = Math.max(sy, cy);
 
-    selectionBox.style.display='block';
-    selectionBox.style.left   = (x1 * s) + 'px';
-    selectionBox.style.top    = (y1 * s) + 'px';
-    selectionBox.style.width  = ((x2 - x1 + 1) * s - (parseInt(getComputedStyle(grid).gap)||1)) + 'px';
-    selectionBox.style.height = ((y2 - y1 + 1) * s - (parseInt(getComputedStyle(grid).gap)||1)) + 'px';
+    selectionBox.style.display = 'block';
+    selectionBox.style.left = (x1 * s) + 'px';
+    selectionBox.style.top = (y1 * s) + 'px';
+    selectionBox.style.width = ((x2 - x1 + 1) * s - (parseInt(getComputedStyle(grid).gap) || 1)) + 'px';
+    selectionBox.style.height = ((y2 - y1 + 1) * s - (parseInt(getComputedStyle(grid).gap) || 1)) + 'px';
 
-    for(let y=y1;y<=y2;y++){
-      for(let x=x1;x<=x2;x++){
+    for(let y=y1; y<=y2; y++){
+      for(let x=x1; x<=x2; x++){
         const id = `${x}:${y}`;
         if(!selection.has(id)){
           selection.add(id);
@@ -559,26 +549,31 @@ document.addEventListener("DOMContentLoaded", () => {
     updateUI(true);
   });
 
-  window.addEventListener('mouseup',()=>{
+  window.addEventListener('mouseup', () => {
     if(!dragging) return;
-    dragging=false; startId=null;
-    selectionBox.style.display='none';
+    dragging = false;
+    startId = null;
+    selectionBox.style.display = 'none';
   });
 
   function currentRect(){
-    if (selection.size===0) return null;
-    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    if (selection.size === 0) return null;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for(const id of selection){
-      const [x,y]=id.split(':').map(Number);
-      minX=Math.min(minX,x); minY=Math.min(minY,y);
-      maxX=Math.max(maxX,x); maxY=Math.max(maxY,y);
+      const [x, y] = id.split(':').map(Number);
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
     }
     return { x:minX, y:minY, w:maxX-minX+1, h:maxY-minY+1 };
   }
 
   function updateUI(resetPrice){
     const sold = (LAST_GRID_DATA && LAST_GRID_DATA.cells)
-      ? Object.keys(LAST_GRID_DATA.cells).length : 0;
+      ? Object.keys(LAST_GRID_DATA.cells).length
+      : 0;
+
     soldEl.textContent = sold.toLocaleString(currentLang === "fr" ? "fr-FR" : "en-US");
     freeEl.textContent = (TOTAL - sold).toLocaleString(currentLang === "fr" ? "fr-FR" : "en-US");
 
@@ -591,7 +586,7 @@ document.addEventListener("DOMContentLoaded", () => {
       confirmBtn.disabled = true;
     }
 
-    buyBtn.disabled = qty === 0 || new Date()>=DEADLINE;
+    buyBtn.disabled = qty === 0 || new Date() >= DEADLINE;
   }
 
   (function tick(){
@@ -601,29 +596,32 @@ document.addEventListener("DOMContentLoaded", () => {
       buyBtn.disabled = true;
       return;
     }
-    const s = Math.floor(ms/1000);
-    const d = Math.floor(s/86400);
-    const h = Math.floor((s%86400)/3600);
-    const m = Math.floor((s%3600)/60);
-    const sec = s%60;
+    const s = Math.floor(ms / 1000);
+    const d = Math.floor(s / 86400);
+    const h = Math.floor((s % 86400) / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
     countdownEl.textContent = `${d}j ${h}h ${m}m ${sec}s`;
     setTimeout(tick, 1000);
   })();
 
-  buyBtn.addEventListener('click', async ()=>{
-    if(selection.size===0) return;
-    if(new Date()>=DEADLINE){ alert(tr('competitionEnded')); return; }
+  buyBtn.addEventListener('click', async () => {
+    if (selection.size === 0) return;
+    if (new Date() >= DEADLINE) {
+      alert(tr('competitionEnded'));
+      return;
+    }
     await refreshQuoteInModal();
-    modalWrap.style.display='flex';
+    modalWrap.style.display = 'flex';
   });
 
-  document.getElementById('cancelBuy').addEventListener('click', ()=>{
-    modalWrap.style.display='none';
+  document.getElementById('cancelBuy').addEventListener('click', () => {
+    modalWrap.style.display = 'none';
   });
 
-  clearBtn.addEventListener('click', ()=>{
+  clearBtn.addEventListener('click', () => {
     selection.clear();
-    grid.querySelectorAll('.cell.sel').forEach(n=>n.classList.remove('sel'));
+    grid.querySelectorAll('.cell.sel').forEach(n => n.classList.remove('sel'));
     updateUI(true);
   });
 
@@ -635,7 +633,7 @@ document.addEventListener("DOMContentLoaded", () => {
       headers:{'content-type':'application/json'},
       body:JSON.stringify(body)
     });
-    const data = await r.json().catch(()=> ({}));
+    const data = await r.json().catch(() => ({}));
     return { ok:r.ok, data };
   }
 
@@ -674,7 +672,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const r = await fetch(`${API_BASE}/api/cells?ts=${Date.now()}`);
       const data = await r.json();
       if (data && data.ok) renderSoldAndLogos(data);
-    }catch(e){ console.warn('loadGridState error', e); }
+    }catch(e){
+      console.warn('loadGridState error', e);
+    }
   }
 
   async function loadStats(){
@@ -707,12 +707,39 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  async function loadLeaderboard(){
+    try{
+      const r = await fetch(`${API_BASE}/api/leaderboard?ts=${Date.now()}`);
+      const data = await r.json();
+      if (!data.ok) return;
+
+      const list = document.getElementById("leaderboardList");
+      list.innerHTML = "";
+
+      const rows = Array.isArray(data.leaderboard) ? data.leaderboard : [];
+      if (!rows.length) {
+        const li = document.createElement("li");
+        li.textContent = tr("noLeaderboard");
+        list.appendChild(li);
+        return;
+      }
+
+      rows.forEach((row, index) => {
+        const li = document.createElement("li");
+        li.textContent = `#${index + 1} ${row.name || tr("anonymous")} — ${row.cells} ${tr("cells")} — ${formatMoney(row.investedCents || 0)}`;
+        list.appendChild(li);
+      });
+    }catch(e){
+      console.warn("loadLeaderboard error", e);
+    }
+  }
+
   function renderSoldAndLogos(data){
     LAST_GRID_DATA = data;
 
     const wrap = document.getElementById('gridWrap');
     const s = stepPx();
-    const gap = parseInt(getComputedStyle(grid).gap)||1;
+    const gap = parseInt(getComputedStyle(grid).gap) || 1;
 
     let art = document.getElementById('artLayer');
     if (art) art.remove();
@@ -725,7 +752,7 @@ document.addEventListener("DOMContentLoaded", () => {
     art.style.zIndex = '2';
     wrap.appendChild(art);
 
-    grid.querySelectorAll('.cell.sold').forEach(n=>n.classList.remove('sold'));
+    grid.querySelectorAll('.cell.sold').forEach(n => n.classList.remove('sold'));
 
     const lots = {};
     for (const key of Object.keys((data && data.cells) ? data.cells : {})) {
@@ -753,10 +780,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const box = document.createElement('div');
       box.style.position = 'absolute';
-      box.style.left  = left+'px';
-      box.style.top   = top+'px';
-      box.style.width = wpx+'px';
-      box.style.height= hpx+'px';
+      box.style.left = left + 'px';
+      box.style.top = top + 'px';
+      box.style.width = wpx + 'px';
+      box.style.height = hpx + 'px';
       box.style.border = '1px solid rgba(255,255,255,.25)';
       box.style.borderRadius = '2px';
       box.style.boxSizing = 'border-box';
@@ -773,12 +800,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const img = document.createElement('img');
         img.src = info.logo;
         img.alt = info.name || '';
-        img.style.width='100%';
-        img.style.height='100%';
-        img.style.display='block';
-        img.style.objectFit='cover';
-        img.style.objectPosition='center';
-        img.draggable=false;
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.display = 'block';
+        img.style.objectFit = 'cover';
+        img.style.objectPosition = 'center';
+        img.draggable = false;
         box.appendChild(img);
       }
 
@@ -799,7 +826,7 @@ document.addEventListener("DOMContentLoaded", () => {
     for (const box of art.children) {
       const ox = +box.dataset.ox, oy = +box.dataset.oy;
       const lw = +box.dataset.lw, lh = +box.dataset.lh;
-      if (cx >= ox && cx < ox+lw && cy >= oy && cy < oy+lh) {
+      if (cx >= ox && cx < ox + lw && cy >= oy && cy < oy + lh) {
         const link = box.dataset.link;
         if (link) window.open(link, '_blank');
         break;
@@ -807,20 +834,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  zoom.addEventListener('input', e=>{
-    document.documentElement.style.setProperty('--cell', e.target.value+'px');
+  zoom.addEventListener('input', e => {
+    document.documentElement.style.setProperty('--cell', e.target.value + 'px');
     if (LAST_GRID_DATA) renderSoldAndLogos(LAST_GRID_DATA);
   });
 
   async function refreshQuoteInModal(){
     try{
       const rect = currentRect();
-      if (!rect){ totalPriceEl.textContent='0 €'; confirmBtn.disabled=true; return; }
+      if (!rect){
+        totalPriceEl.textContent = '0 €';
+        confirmBtn.disabled = true;
+        return;
+      }
 
-      const buyerEmail=(mEmail.value||'').trim();
+      const buyerEmail = (mEmail.value || '').trim();
       if(!buyerEmail){
         totalPriceEl.textContent = tr('enterEmailForQuote');
-        confirmBtn.disabled=true;
+        confirmBtn.disabled = true;
         return;
       }
 
@@ -828,19 +859,19 @@ document.addEventListener("DOMContentLoaded", () => {
       const q = await postJSON(`${API_BASE}/api/purchase-rect/quote`, body);
 
       if(!q.ok){
-        totalPriceEl.textContent='—';
+        totalPriceEl.textContent = '—';
         lotRuleEl.textContent = q.data?.lotRule ? (tr('rulePrefix') + q.data.lotRule)
                                                 : (q.data?.error || tr('quoteError'));
-        confirmBtn.disabled=true;
+        confirmBtn.disabled = true;
         return;
       }
 
       totalPriceEl.textContent = formatMoney(q.data.totalCents || 0);
       lotRuleEl.textContent = q.data?.lotRule ? (tr('rulePrefix') + q.data.lotRule) : '';
-      confirmBtn.disabled=false;
+      confirmBtn.disabled = false;
     }catch(e){
-      totalPriceEl.textContent='—';
-      confirmBtn.disabled=true;
+      totalPriceEl.textContent = '—';
+      confirmBtn.disabled = true;
     }
   }
 
@@ -849,9 +880,9 @@ document.addEventListener("DOMContentLoaded", () => {
   confirmBtn.addEventListener('click', async ()=>{
     const rect = currentRect();
     if(!rect){ alert(tr('selectCases')); return; }
-    if(new Date()>=DEADLINE){ alert(tr('competitionEnded')); return; }
+    if(new Date() >= DEADLINE){ alert(tr('competitionEnded')); return; }
 
-    const buyerEmail=(mEmail.value||'').trim();
+    const buyerEmail = (mEmail.value || '').trim();
     if(!buyerEmail){ alert(tr('enterEmail')); return; }
 
     let logoUrl = "";
@@ -862,34 +893,43 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const name  = (document.getElementById('mName').value||'').trim();
-    const link  = (document.getElementById('mLink').value||'').trim();
-    const color = (document.getElementById('mColor').value||'#1e90ff').trim();
-    const msg   = (document.getElementById('mMsg').value||'').trim();
+    const name  = (document.getElementById('mName').value || '').trim();
+    const link  = (document.getElementById('mLink').value || '').trim();
+    const color = (document.getElementById('mColor').value || '#1e90ff').trim();
+    const msg   = (document.getElementById('mMsg').value || '').trim();
 
     const body = { ...rect, buyerEmail, name, link, logo: logoUrl, color, msg };
 
     const q = await postJSON(`${API_BASE}/api/purchase-rect/quote`, body);
-    if(!q.ok){ alert(q.data?.lotRule || q.data?.error || tr('quoteRejected')); return; }
+    if(!q.ok){
+      alert(q.data?.lotRule || q.data?.error || tr('quoteRejected'));
+      return;
+    }
 
     const r = await postJSON(`${API_BASE}/api/purchase-rect/checkout`, body);
-    if(!r.ok || !r.data?.ok){ alert(r.data?.error || tr('paymentError')); return; }
+    if(!r.ok || !r.data?.ok){
+      alert(r.data?.error || tr('paymentError'));
+      return;
+    }
 
     window.location.href = r.data.url;
   });
 
   loadGridState();
   loadStats();
+  loadLeaderboard();
 
   document.addEventListener('visibilitychange', ()=>{
     if(!document.hidden) {
       loadGridState();
       loadStats();
+      loadLeaderboard();
     }
   });
 
   setInterval(loadGridState, 20000);
   setInterval(loadStats, 20000);
+  setInterval(loadLeaderboard, 20000);
 
   applyTranslations();
   updateUI(true);

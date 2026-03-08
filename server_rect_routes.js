@@ -58,13 +58,9 @@ function lastInfoForCell(x, y) {
 }
 
 // --- RÈGLE DES LOTS -------------------------------------------------------
-// On regarde tous les lots touchés par le rectangle (x,y,w,h).
-// Si un lot est touché PARTIELLEMENT => refus.
-// Si un lot est contenu ENTIEREMENT dans le rectangle => OK.
-// Les autres cellules neuves => OK.
 function checkLotRuleAndCollect(rect) {
   const { x, y, w, h } = rect;
-  const touchedLots = {}; // key "ox:oy:lw:lh" -> info
+  const touchedLots = {};
   let newCells = 0;
   let overlappedCells = 0;
 
@@ -93,7 +89,6 @@ function checkLotRuleAndCollect(rect) {
     }
   }
 
-  // Vérifie pour chaque lot touché si le rectangle le couvre complètement
   for (const lotKey of Object.keys(touchedLots)) {
     const info = touchedLots[lotKey];
     const lx1 = info.lotOriginX;
@@ -128,7 +123,7 @@ function checkLotRuleAndCollect(rect) {
   };
 }
 
-// --- CALCUL DU DEVIS (ne modifie PAS l'état !) ---------------------------
+// --- CALCUL DU DEVIS ------------------------------------------------------
 function calcRectQuote(body) {
   const x = Number(body.x);
   const y = Number(body.y);
@@ -165,8 +160,6 @@ function calcRectQuote(body) {
       const k = keyOf(xx, yy);
       const hist = STATE.cells[k];
       const prevSalesCount = Array.isArray(hist) ? hist.length : 0;
-
-      // Niveau 0 : 100 €, niveau 1 : 200 €, niveau 2 : 400 €, etc.
       const cellPrice = BASE_PRICE_CENTS * Math.pow(2, prevSalesCount);
       totalCents += cellPrice;
     }
@@ -186,9 +179,8 @@ function calcRectQuote(body) {
   };
 }
 
-// --- APPLICATION DE LA VENTE (après paiement réussi) ---------------------
+// --- APPLICATION DE LA VENTE ---------------------------------------------
 function fulfillRectDirect(payload) {
-  // Sécurité : on re-vérifie les règles et le montant (mais sans mutation)
   const q = calcRectQuote(payload);
   if (!q.ok) {
     return q;
@@ -219,7 +211,6 @@ function fulfillRectDirect(payload) {
         lotW: w,
         lotH: h,
 
-        // Pour mémoire / analyse
         priceCents,
         saleIndex: prevSalesCount + 1
       };
@@ -234,7 +225,6 @@ function fulfillRectDirect(payload) {
 }
 
 // --- STATS VIRALES --------------------------------------------------------
-// Renvoie : total généré, plus gros achat, derniers achats
 router.get("/stats", (req, res) => {
   try {
     const cells = STATE && STATE.cells ? STATE.cells : {};
@@ -278,9 +268,7 @@ router.get("/stats", (req, res) => {
 
     for (const sale of sales) {
       totalCents += sale.priceCents;
-      if (sale.priceCents > highestCents) {
-        highestCents = sale.priceCents;
-      }
+      if (sale.priceCents > highestCents) highestCents = sale.priceCents;
     }
 
     sales.sort((a, b) => {
@@ -301,14 +289,82 @@ router.get("/stats", (req, res) => {
   }
 });
 
-// --- ROUTES HTTP ----------------------------------------------------------
+// --- LEADERBOARD ----------------------------------------------------------
+router.get("/leaderboard", (req, res) => {
+  try {
+    const cells = STATE && STATE.cells ? STATE.cells : {};
+    const owners = new Map();
+    const countedLots = new Set();
 
-// État complet de la grille
+    for (const cellKey of Object.keys(cells)) {
+      const history = Array.isArray(cells[cellKey]) ? cells[cellKey] : [];
+      if (!history.length) continue;
+
+      const last = history[history.length - 1];
+      const lotKey = [
+        last.buyerEmail || "",
+        last.lotOriginX ?? "",
+        last.lotOriginY ?? "",
+        last.lotW ?? "",
+        last.lotH ?? ""
+      ].join("|");
+
+      if (countedLots.has(lotKey)) continue;
+      countedLots.add(lotKey);
+
+      const ownerKey = (last.buyerEmail || "").toLowerCase() || "anonymous";
+      if (!owners.has(ownerKey)) {
+        owners.set(ownerKey, {
+          name: last.name || "Anonymous",
+          buyerEmail: last.buyerEmail || "",
+          blocks: 0,
+          cells: 0,
+          investedCents: 0
+        });
+      }
+
+      const owner = owners.get(ownerKey);
+      owner.blocks += 1;
+      owner.cells += Number(last.lotW || 0) * Number(last.lotH || 0);
+
+      let latestBlockPrice = 0;
+      for (const sale of history) {
+        const sameLot =
+          sale.lotOriginX === last.lotOriginX &&
+          sale.lotOriginY === last.lotOriginY &&
+          sale.lotW === last.lotW &&
+          sale.lotH === last.lotH &&
+          (sale.buyerEmail || "").toLowerCase() === ownerKey;
+
+        if (sameLot) {
+          latestBlockPrice += Number(sale.priceCents || 0);
+        }
+      }
+      owner.investedCents += latestBlockPrice;
+    }
+
+    const leaderboard = Array.from(owners.values())
+      .sort((a, b) => {
+        if (b.cells !== a.cells) return b.cells - a.cells;
+        return b.investedCents - a.investedCents;
+      })
+      .slice(0, 10);
+
+    return res.json({
+      ok: true,
+      leaderboard
+    });
+  } catch (e) {
+    console.error("❌ leaderboard error:", e.message);
+    return res.status(500).json({ ok: false, error: "leaderboard_error" });
+  }
+});
+
+// --- ROUTES HTTP ----------------------------------------------------------
 router.get("/cells", (req, res) => {
   res.json({ ok: true, cells: STATE.cells });
 });
 
-// Devis pour un rectangle
 router.post("/purchase-rect/quote", (req, res) => {
   const q = calcRectQuote(req.body || {});
   if (!q.ok) return res.status(400).json(q);
