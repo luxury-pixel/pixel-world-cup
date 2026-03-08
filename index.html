@@ -63,6 +63,7 @@
     }
     .btn:disabled{opacity:.45;cursor:not-allowed}
     .range{accent-color:#79f}
+
     .viralBar{display:flex;gap:10px;flex-wrap:wrap;padding-top:10px;}
     .viralCard{
       background:rgba(255,255,255,.06);
@@ -83,6 +84,7 @@
       font-size:13px;
     }
     .latestSales li,.leaderboardList li{margin:4px 0;}
+
     #stage{flex:1;padding:18px;}
     #gridWrap{
       margin:auto;background:rgba(255,255,255,.03);
@@ -111,11 +113,13 @@
       position:absolute;pointer-events:none;border:2px dashed #7fb3ff;
       background:rgba(127,179,255,.15);display:none;z-index:5;
     }
+
     footer{
       padding:14px 18px;border-top:1px solid rgba(255,255,255,.08);
       text-align:center;color:#bcd1ff;
       background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);
     }
+
     .modalWrap{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:10}
     .modal{
       width:min(560px,92vw);background:#0f1224;border:1px solid #2a2e52;
@@ -166,6 +170,11 @@
   </div>
 
   <div class="viralBar">
+    <div class="viralCard">
+      <strong id="lastLiveLabel">🔥 Dernier achat</strong>
+      <div class="viralValue" id="lastSaleLive">—</div>
+    </div>
+
     <div class="viralCard">
       <strong id="generatedLabel">Total généré</strong>
       <div class="viralValue" id="totalMoney">0 €</div>
@@ -228,6 +237,7 @@
       <span id="selectedCasesLabel">Cases sélectionnées</span> : <b id="selCount">0</b> — <span id="totalPriceLabel">Total</span> : <span class="priceTag" id="totalPrice">0 €</span>
       <div id="lotRule" class="muted"></div>
     </div>
+    <div class="smallNote" id="profitInfo"></div>
 
     <div class="actions">
       <button id="cancelBuy" class="btn">Annuler</button>
@@ -266,7 +276,9 @@ document.addEventListener("DOMContentLoaded", () => {
       highest: "Pixel le plus cher",
       latestSales: "Derniers achats",
       leaderboard: "Top acheteurs",
+      lastLive: "🔥 Dernier achat",
       anonymous: "Anonyme",
+      earlyBuyer: "⭐ Early buyer",
       checkout: "Finaliser l’achat",
       name: "Votre nom",
       namePlaceholder: "Nom affiché publiquement",
@@ -299,6 +311,9 @@ document.addEventListener("DOMContentLoaded", () => {
       countdownEnded: "Terminé",
       noSales: "Aucun achat pour le moment",
       noLeaderboard: "Aucun acheteur pour le moment",
+      noLastSale: "Aucun achat récent",
+      profitIfResold: "Si ce bloc est revendu, vous gagnez environ ",
+      nextResale: "prochaine revente",
       cells: "cases"
     },
     en: {
@@ -314,7 +329,9 @@ document.addEventListener("DOMContentLoaded", () => {
       highest: "Highest pixel",
       latestSales: "Latest purchases",
       leaderboard: "Top buyers",
+      lastLive: "🔥 Last purchase",
       anonymous: "Anonymous",
+      earlyBuyer: "⭐ Early buyer",
       checkout: "Complete purchase",
       name: "Your name",
       namePlaceholder: "Public display name",
@@ -347,6 +364,9 @@ document.addEventListener("DOMContentLoaded", () => {
       countdownEnded: "Ended",
       noSales: "No purchases yet",
       noLeaderboard: "No buyers yet",
+      noLastSale: "No recent purchase",
+      profitIfResold: "If this block is resold, you earn about ",
+      nextResale: "next resale",
       cells: "cells"
     }
   };
@@ -385,6 +405,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("highestLabel").textContent = tr("highest");
     document.getElementById("latestSalesLabel").textContent = tr("latestSales");
     document.getElementById("leaderboardLabel").textContent = tr("leaderboard");
+    document.getElementById("lastLiveLabel").textContent = tr("lastLive");
     document.getElementById("checkoutTitle").textContent = tr("checkout");
     document.getElementById("nameLabel").textContent = tr("name");
     document.getElementById("emailLabel").textContent = tr("email");
@@ -687,19 +708,40 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("highestPixel").textContent = formatMoney(data.highestCents || 0);
 
       const list = document.getElementById("latestSalesList");
+      const lastSaleLive = document.getElementById("lastSaleLive");
+
       list.innerHTML = "";
 
       const sales = Array.isArray(data.lastSales) ? data.lastSales : [];
+
       if (!sales.length) {
         const li = document.createElement("li");
         li.textContent = tr("noSales");
         list.appendChild(li);
+
+        if (lastSaleLive) {
+          lastSaleLive.textContent = tr("noLastSale");
+        }
         return;
+      }
+
+      if (lastSaleLive) {
+        const s = sales[0];
+        lastSaleLive.textContent =
+          `${s.name || tr("anonymous")} — ${formatMoney(s.priceCents || 0)}`;
       }
 
       for (const sale of sales) {
         const li = document.createElement("li");
-        li.textContent = `${sale.name || tr("anonymous")} — ${formatMoney(sale.priceCents || 0)}`;
+
+        const earlyBadge =
+          sale.earlyOrder && sale.earlyOrder <= 100
+            ? ` ${tr("earlyBuyer")} #${sale.earlyOrder}`
+            : "";
+
+        li.textContent =
+          `${sale.name || tr("anonymous")}${earlyBadge} — ${formatMoney(sale.priceCents || 0)}`;
+
         list.appendChild(li);
       }
     }catch(e){
@@ -842,8 +884,11 @@ document.addEventListener("DOMContentLoaded", () => {
   async function refreshQuoteInModal(){
     try{
       const rect = currentRect();
+      const profitBox = document.getElementById("profitInfo");
+
       if (!rect){
         totalPriceEl.textContent = '0 €';
+        if (profitBox) profitBox.textContent = '';
         confirmBtn.disabled = true;
         return;
       }
@@ -851,6 +896,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const buyerEmail = (mEmail.value || '').trim();
       if(!buyerEmail){
         totalPriceEl.textContent = tr('enterEmailForQuote');
+        if (profitBox) profitBox.textContent = '';
         confirmBtn.disabled = true;
         return;
       }
@@ -862,15 +908,27 @@ document.addEventListener("DOMContentLoaded", () => {
         totalPriceEl.textContent = '—';
         lotRuleEl.textContent = q.data?.lotRule ? (tr('rulePrefix') + q.data.lotRule)
                                                 : (q.data?.error || tr('quoteError'));
+        if (profitBox) profitBox.textContent = '';
         confirmBtn.disabled = true;
         return;
       }
 
       totalPriceEl.textContent = formatMoney(q.data.totalCents || 0);
       lotRuleEl.textContent = q.data?.lotRule ? (tr('rulePrefix') + q.data.lotRule) : '';
+
+      if (profitBox && q.data.totalCents) {
+        const resalePrice = q.data.totalCents * 2;
+        const estimatedProfit = Math.round(q.data.totalCents * 0.3);
+        profitBox.textContent =
+          tr("profitIfResold") + formatMoney(estimatedProfit) +
+          ` (${tr("nextResale")}: ${formatMoney(resalePrice)})`;
+      }
+
       confirmBtn.disabled = false;
     }catch(e){
       totalPriceEl.textContent = '—';
+      const profitBox = document.getElementById("profitInfo");
+      if (profitBox) profitBox.textContent = '';
       confirmBtn.disabled = true;
     }
   }
