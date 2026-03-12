@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Achat – Pixel World Cup</title>
+  <title>Achat – Pixel-Territory</title>
   <style>
     body{
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -84,8 +84,8 @@
   </section>
 
   <script>
-    // Si tu ouvres via Live Server (5500), on appelle l'API en 4242.
-    const API_BASE = (location.port === '4242') ? '' : 'http://localhost:4242';
+    // ✅ Prod-safe (Render) + local-safe si tu ouvres via Express (http://localhost:4242)
+    const API_BASE = window.location.origin;
 
     async function postJSON(url, body){
       const r = await fetch(url, {
@@ -156,17 +156,15 @@
     });
 
     // 🚀 Auto-préremplir depuis la sélection précédente (index.html)
-    (async function autoPrefill(){
+    (function autoPrefill(){
       const rect = loadSelectionFromSession();
-      if (!rect) return; // pas de sélection en mémoire, on laisse les valeurs par défaut
+      if (!rect) return;
       el.x.value = rect.x;
       el.y.value = rect.y;
       el.w.value = rect.w;
       el.h.value = rect.h;
-      // tu saisis l'email et tu cliques payer (ou on peut déclencher auto si tu veux)
     })();
   </script>
 
 </body>
 </html>
-

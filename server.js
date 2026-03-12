@@ -208,7 +208,7 @@ app.post("/api/purchase-rect/checkout", async (req, res) => {
           price_data: {
             currency: q.currency || "eur",
             product_data: {
-              name: `Pixel World Cup — Bloc ${q.w}×${q.h} (${q.x},${q.y})`,
+              name: `Pixel Territory — Bloc ${q.w}×${q.h} (${q.x},${q.y})`,
             },
             unit_amount: q.totalCents,
           },
