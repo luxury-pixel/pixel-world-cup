@@ -17,6 +17,45 @@ const DATA_FILE = path.join(__dirname, "cells_state.json");
 
 // --- État en mémoire : { cells: { "x:y": [ events... ] } } ---
 let STATE = { cells: {} };
+async function loadStateFromSupabase() {
+  try {
+    const result = await pool.query(`
+      SELECT cell_key, lot_origin_x, lot_origin_y, lot_w, lot_h,
+             buyer_email, name, link, logo, color, msg, price_cents, created_at
+      FROM pixel_purchases
+      ORDER BY created_at ASC, id ASC
+    `);
+
+    const cells = {};
+
+    for (const row of result.rows) {
+      const event = {
+        ts: row.created_at,
+        buyerEmail: row.buyer_email,
+        name: row.name || "",
+        link: row.link || "",
+        logo: row.logo || "",
+        color: row.color || "#1e90ff",
+        msg: row.msg || "",
+        lotOriginX: row.lot_origin_x,
+        lotOriginY: row.lot_origin_y,
+        lotW: row.lot_w,
+        lotH: row.lot_h,
+        priceCents: row.price_cents
+      };
+
+      if (!cells[row.cell_key]) cells[row.cell_key] = [];
+      cells[row.cell_key].push(event);
+    }
+
+    STATE.cells = cells;
+
+    console.log("✅ Supabase state loaded");
+
+  } catch (err) {
+    console.error("❌ Supabase load error:", err);
+  }
+}
 
 // Chargement / sauvegarde -------------------------------------------------
 function loadState() {
@@ -39,7 +78,8 @@ function saveState() {
   }
 }
 
-loadState();
+loadStateFromSupabase();
+
 
 // Helpers ------------------------------------------------------------------
 function keyOf(x, y) {
