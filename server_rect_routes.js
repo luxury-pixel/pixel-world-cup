@@ -17,14 +17,19 @@ const DATA_FILE = path.join(__dirname, "cells_state.json");
 
 // --- État en mémoire : { cells: { "x:y": [ events... ] } } ---
 let STATE = { cells: {} };
+
 async function loadStateFromSupabase() {
   try {
+    console.log("LOADING STATE FROM SUPABASE");
+
     const result = await pool.query(`
       SELECT cell_key, lot_origin_x, lot_origin_y, lot_w, lot_h,
              buyer_email, name, link, logo, color, msg, price_cents, created_at
       FROM pixel_purchases
       ORDER BY created_at ASC, id ASC
     `);
+
+    console.log("SUPABASE ROWS:", result.rows.length);
 
     const cells = {};
 
@@ -51,9 +56,8 @@ async function loadStateFromSupabase() {
     STATE.cells = cells;
 
     console.log("✅ Supabase state loaded");
-
   } catch (err) {
-    console.error("❌ Supabase load error:", err);
+    console.error("❌ Supabase load error:", err.message);
   }
 }
 
@@ -78,8 +82,8 @@ function saveState() {
   }
 }
 
+// On charge Supabase au démarrage
 loadStateFromSupabase();
-
 
 // Helpers ------------------------------------------------------------------
 function keyOf(x, y) {
@@ -105,8 +109,8 @@ function checkLotRuleAndCollect(rect) {
   let newCells = 0;
   let overlappedCells = 0;
 
-  for (let yy = y; yy < y + w && yy < GRID_H; yy++) {
-    for (let xx = x; xx < x + h && xx < GRID_W; xx++) {
+  for (let yy = y; yy < y + h && yy < GRID_H; yy++) {
+    for (let xx = x; xx < x + w && xx < GRID_W; xx++) {
       if (!inBounds(xx, yy)) {
         return {
           ok: false,
@@ -175,6 +179,7 @@ function calcRectQuote(body) {
   if (!buyerEmail) {
     return { ok: false, error: "buyerEmail manquant" };
   }
+
   if (
     !Number.isInteger(x) ||
     !Number.isInteger(y) ||
@@ -185,6 +190,7 @@ function calcRectQuote(body) {
   ) {
     return { ok: false, error: "coordonnées invalides" };
   }
+
   if (!inBounds(x, y) || !inBounds(x + w - 1, y + h - 1)) {
     return { ok: false, error: "out_of_bounds" };
   }
@@ -258,26 +264,37 @@ async function fulfillRectDirect(payload) {
 
       hist.push(event);
       STATE.cells[k] = hist;
-      
+
+      console.log("INSERT SUPABASE START", {
+        k,
+        x,
+        y,
+        w,
+        h,
+        priceCents: event.priceCents
+      });
+
       await pool.query(
-  `INSERT INTO pixel_purchases
-  (cell_key, lot_origin_x, lot_origin_y, lot_w, lot_h, buyer_email, name, link, logo, color, msg, price_cents)
-  VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-  [
-    k,
-    x,
-    y,
-    w,
-    h,
-    q.buyerEmail,
-    event.name,
-    event.link,
-    event.logo,
-    event.color,
-    event.msg,
-    event.priceCents
-  ]
-);
+        `INSERT INTO pixel_purchases
+        (cell_key, lot_origin_x, lot_origin_y, lot_w, lot_h, buyer_email, name, link, logo, color, msg, price_cents)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+        [
+          k,
+          x,
+          y,
+          w,
+          h,
+          q.buyerEmail,
+          event.name,
+          event.link,
+          event.logo,
+          event.color,
+          event.msg,
+          event.priceCents
+        ]
+      );
+
+      console.log("INSERT SUPABASE OK", k);
     }
   }
 

@@ -18,9 +18,11 @@ const PORT = process.env.PORT || 4242;
 // 1) Stripe
 // =========================
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+
 if (!stripeSecretKey) {
   console.error("❌ STRIPE_SECRET_KEY manquante dans .env");
 }
+
 const stripe = Stripe(stripeSecretKey || "");
 
 // =========================
@@ -35,6 +37,7 @@ const webhookSecret =
 // 3) Dossier uploads
 // =========================
 const uploadsDir = path.join(__dirname, "uploads");
+
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -46,16 +49,24 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadsDir);
   },
+
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname || "").toLowerCase();
-    const safeExt = [".png", ".jpg", ".jpeg", ".webp", ".gif"].includes(ext) ? ext : ".png";
-    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`;
+
+    const safeExt = [".png", ".jpg", ".jpeg", ".webp", ".gif"].includes(ext)
+      ? ext
+      : ".png";
+
+    const uniqueName =
+      `${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`;
+
     cb(null, uniqueName);
   },
 });
 
 const fileFilter = (req, file, cb) => {
   const allowed = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+
   if (allowed.includes(file.mimetype)) {
     cb(null, true);
   } else {
@@ -67,32 +78,39 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 8 * 1024 * 1024, // 8 MB
+    fileSize: 8 * 1024 * 1024,
   },
 });
 
 // =========================
-// 5) Webhook Stripe (RAW AVANT express.json)
+// 5) Webhook Stripe
 // =========================
 app.post("/webhook/stripe", express.raw({ type: "application/json" }), async (req, res) => {
   try {
+
     if (!webhookSecret) {
-      console.error("❌ Webhook secret manquant (.env): STRIPE_WEBHOOK_SECRET ou WHSEC");
+      console.error("❌ Webhook secret manquant (.env)");
       return res.status(500).send("Webhook secret manquant côté serveur");
     }
 
     const sig = req.headers["stripe-signature"];
-    const event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+
+    const event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      webhookSecret
+    );
 
     if (event.type === "checkout.session.completed") {
+
       const session = event.data.object;
 
-      // Sécurité : ne finalise que si payé
       if (session.payment_status !== "paid") {
         return res.json({ received: true });
       }
 
       if (session.metadata && session.metadata.kind === "rect") {
+
         const payload = {
           x: Number(session.metadata.x),
           y: Number(session.metadata.y),
@@ -106,26 +124,36 @@ app.post("/webhook/stripe", express.raw({ type: "application/json" }), async (re
           msg: session.metadata.msg || "",
         };
 
+        console.log("🔥 Stripe webhook purchase received", payload);
+
         const out = await fulfillRectDirect(payload);
-if (!out.ok) console.error("❌ fulfill error:", out.error);
+
+        console.log("FULFILL RESULT:", out);
+
+        if (!out.ok) {
+          console.error("❌ fulfill error:", out.error);
+        }
       }
     }
 
     return res.json({ received: true });
+
   } catch (err) {
+
     console.error("Webhook error:", err.message);
+
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 });
 
 // =========================
-// 6) Middlewares JSON APRÈS webhook
+// 6) Middlewares JSON
 // =========================
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Fichiers statiques
+// fichiers statiques
 app.use(express.static(__dirname));
 app.use("/uploads", express.static(uploadsDir));
 
@@ -133,9 +161,18 @@ app.use("/uploads", express.static(uploadsDir));
 // 7) Pages
 // =========================
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
-app.get("/success", (req, res) => res.sendFile(path.join(__dirname, "success.html")));
-app.get("/cancel", (req, res) => res.sendFile(path.join(__dirname, "cancel.html")));
-app.get("/about", (req, res) => res.sendFile(path.join(__dirname, "about.html")));
+
+app.get("/success", (req, res) =>
+  res.sendFile(path.join(__dirname, "success.html"))
+);
+
+app.get("/cancel", (req, res) =>
+  res.sendFile(path.join(__dirname, "cancel.html"))
+);
+
+app.get("/about", (req, res) =>
+  res.sendFile(path.join(__dirname, "about.html"))
+);
 
 // =========================
 // 8) API routes existantes
@@ -146,12 +183,18 @@ app.use("/api", router);
 // 9) Upload image
 // =========================
 app.post("/api/upload-image", upload.single("image"), (req, res) => {
+
   try {
+
     if (!req.file) {
-      return res.status(400).json({ ok: false, error: "Aucune image reçue" });
+      return res.status(400).json({
+        ok: false,
+        error: "Aucune image reçue"
+      });
     }
 
     const BASE = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
+
     const fileUrl = `${BASE}/uploads/${req.file.filename}`;
 
     return res.json({
@@ -159,23 +202,41 @@ app.post("/api/upload-image", upload.single("image"), (req, res) => {
       url: fileUrl,
       filename: req.file.filename,
     });
+
   } catch (e) {
+
     console.error("upload error:", e);
-    return res.status(500).json({ ok: false, error: "upload_error" });
+
+    return res.status(500).json({
+      ok: false,
+      error: "upload_error"
+    });
   }
 });
 
-// Gestion propre des erreurs multer
+// gestion erreurs multer
 app.use((err, req, res, next) => {
+
   if (err instanceof multer.MulterError) {
+
     if (err.code === "LIMIT_FILE_SIZE") {
-      return res.status(400).json({ ok: false, error: "Image trop lourde (max 8 MB)" });
+      return res.status(400).json({
+        ok: false,
+        error: "Image trop lourde (max 8 MB)"
+      });
     }
-    return res.status(400).json({ ok: false, error: err.message });
+
+    return res.status(400).json({
+      ok: false,
+      error: err.message
+    });
   }
 
   if (err && err.message) {
-    return res.status(400).json({ ok: false, error: err.message });
+    return res.status(400).json({
+      ok: false,
+      error: err.message
+    });
   }
 
   next();
@@ -185,24 +246,40 @@ app.use((err, req, res, next) => {
 // 10) Stripe checkout
 // =========================
 app.post("/api/purchase-rect/checkout", async (req, res) => {
+
   try {
+
     const body = req.body || {};
+
     if (!body.buyerEmail) {
-      return res.status(400).json({ ok: false, error: "buyerEmail requis" });
+      return res.status(400).json({
+        ok: false,
+        error: "buyerEmail requis"
+      });
     }
 
     const q = calcRectQuote(body);
+
     if (!q.ok) {
-      return res.status(400).json({ ok: false, error: q.error, lotRule: q.lotRule });
+      return res.status(400).json({
+        ok: false,
+        error: q.error,
+        lotRule: q.lotRule
+      });
     }
 
     const BASE = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
 
     const session = await stripe.checkout.sessions.create({
+
       mode: "payment",
+
       success_url: `${BASE}/success?session_id={CHECKOUT_SESSION_ID}`,
+
       cancel_url: `${BASE}/cancel`,
+
       customer_email: body.buyerEmail,
+
       line_items: [
         {
           price_data: {
@@ -215,6 +292,7 @@ app.post("/api/purchase-rect/checkout", async (req, res) => {
           quantity: 1,
         },
       ],
+
       metadata: {
         kind: "rect",
         x: String(q.x),
@@ -230,10 +308,19 @@ app.post("/api/purchase-rect/checkout", async (req, res) => {
       },
     });
 
-    return res.json({ ok: true, url: session.url });
+    return res.json({
+      ok: true,
+      url: session.url
+    });
+
   } catch (e) {
+
     console.error(e);
-    return res.status(500).json({ ok: false, error: "checkout_error" });
+
+    return res.status(500).json({
+      ok: false,
+      error: "checkout_error"
+    });
   }
 });
 
@@ -241,6 +328,8 @@ app.post("/api/purchase-rect/checkout", async (req, res) => {
 // 11) Lancement serveur
 // =========================
 app.listen(PORT, "0.0.0.0", () => {
+
   console.log(`✅ Serveur prêt - Port ${PORT}`);
   console.log(`➡️ Site: [http://localhost:${PORT}/`)
+
 });
