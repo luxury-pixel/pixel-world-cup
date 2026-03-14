@@ -74,7 +74,7 @@ const upload = multer({
 // =========================
 // 5) Webhook Stripe (RAW AVANT express.json)
 // =========================
-app.post("/webhook/stripe", express.raw({ type: "application/json" }), (req, res) => {
+app.post("/webhook/stripe", express.raw({ type: "application/json" }), async (req, res) => {
   try {
     if (!webhookSecret) {
       console.error("❌ Webhook secret manquant (.env): STRIPE_WEBHOOK_SECRET ou WHSEC");
@@ -106,8 +106,8 @@ app.post("/webhook/stripe", express.raw({ type: "application/json" }), (req, res
           msg: session.metadata.msg || "",
         };
 
-        const out = fulfillRectDirect(payload);
-        if (!out.ok) console.error("❌ fulfill error:", out.error);
+        const out = await fulfillRectDirect(payload);
+if (!out.ok) console.error("❌ fulfill error:", out.error);
       }
     }
 
@@ -208,7 +208,7 @@ app.post("/api/purchase-rect/checkout", async (req, res) => {
           price_data: {
             currency: q.currency || "eur",
             product_data: {
-              name: `Pixel Territory — Bloc ${q.w}×${q.h} (${q.x},${q.y})`,
+              name: `Pixel World Cup — Bloc ${q.w}×${q.h} (${q.x},${q.y})`,
             },
             unit_amount: q.totalCents,
           },

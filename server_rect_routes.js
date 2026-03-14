@@ -1,6 +1,7 @@
 // server_rect_routes.js
 // Logique de la grille + règles des lots + calcul des prix
 
+const pool = require("./db");
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
@@ -180,7 +181,7 @@ function calcRectQuote(body) {
 }
 
 // --- APPLICATION DE LA VENTE ---------------------------------------------
-function fulfillRectDirect(payload) {
+async function fulfillRectDirect(payload) {
   const q = calcRectQuote(payload);
   if (!q.ok) {
     return q;
@@ -217,6 +218,26 @@ function fulfillRectDirect(payload) {
 
       hist.push(event);
       STATE.cells[k] = hist;
+      
+      await pool.query(
+  `INSERT INTO pixel_purchases
+  (cell_key, lot_origin_x, lot_origin_y, lot_w, lot_h, buyer_email, name, link, logo, color, msg, price_cents)
+  VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+  [
+    k,
+    x,
+    y,
+    w,
+    h,
+    q.buyerEmail,
+    event.name,
+    event.link,
+    event.logo,
+    event.color,
+    event.msg,
+    event.priceCents
+  ]
+);
     }
   }
 
