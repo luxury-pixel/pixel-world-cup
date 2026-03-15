@@ -57,7 +57,11 @@ async function loadStateFromSupabase() {
 
     console.log("✅ Supabase state loaded");
   } catch (err) {
-    console.error("❌ Supabase load error:", err.message);
+    console.error("❌ Supabase load error FULL:", err);
+    console.error("❌ message:", err?.message);
+    console.error("❌ code:", err?.code);
+    console.error("❌ detail:", err?.detail);
+    console.error("❌ hint:", err?.hint);
   }
 }
 
