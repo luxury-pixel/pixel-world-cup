@@ -6,6 +6,7 @@ const cors = require("cors");
 const fs = require("fs");
 const multer = require("multer");
 const Stripe = require("stripe");
+const { v2: cloudinary } = require("cloudinary");
 
 dotenv.config();
 
@@ -15,12 +16,21 @@ const app = express();
 const PORT = process.env.PORT || 4242;
 
 // =========================
+// 0) Cloudinary
+// =========================
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// =========================
 // 1) Stripe
 // =========================
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
 if (!stripeSecretKey) {
- console.error("❌ STRIPE_SECRET_KEY manquante dans .env");
+  console.error("❌ STRIPE_SECRET_KEY manquante dans .env");
 }
 
 const stripe = Stripe(stripeSecretKey || "");
@@ -29,9 +39,9 @@ const stripe = Stripe(stripeSecretKey || "");
 // 2) Webhook secret
 // =========================
 const webhookSecret =
- process.env.STRIPE_WEBHOOK_SECRET ||
- process.env.WHSEC ||
- process.env.STRIPE_WEBHOOK_SIGNING_SECRET;
+  process.env.STRIPE_WEBHOOK_SECRET ||
+  process.env.WHSEC ||
+  process.env.STRIPE_WEBHOOK_SIGNING_SECRET;
 
 // =========================
 // 3) Dossier uploads
@@ -39,103 +49,103 @@ const webhookSecret =
 const uploadsDir = path.join(__dirname, "uploads");
 
 if (!fs.existsSync(uploadsDir)) {
- fs.mkdirSync(uploadsDir, { recursive: true });
+  fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
 // =========================
 // 4) Multer config
 // =========================
 const storage = multer.diskStorage({
- destination: (req, file, cb) => {
-   cb(null, uploadsDir);
- },
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
 
- filename: (req, file, cb) => {
-   const ext = path.extname(file.originalname || "").toLowerCase();
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname || "").toLowerCase();
 
-   const safeExt = [".png", ".jpg", ".jpeg", ".webp", ".gif"].includes(ext)
-     ? ext
-     : ".png";
+    const safeExt = [".png", ".jpg", ".jpeg", ".webp", ".gif"].includes(ext)
+      ? ext
+      : ".png";
 
-   const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`;
-   cb(null, uniqueName);
- },
+    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`;
+    cb(null, uniqueName);
+  },
 });
 
 const fileFilter = (req, file, cb) => {
- const allowed = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+  const allowed = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 
- if (allowed.includes(file.mimetype)) {
-   cb(null, true);
- } else {
-   cb(new Error("Format non autorisé. Utilise PNG, JPG/JPEG, WEBP ou GIF."));
- }
+  if (allowed.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Format non autorisé. Utilise PNG, JPG/JPEG, WEBP ou GIF."));
+  }
 };
 
 const upload = multer({
- storage,
- fileFilter,
- limits: {
-   fileSize: 8 * 1024 * 1024,
- },
+  storage,
+  fileFilter,
+  limits: {
+    fileSize: 8 * 1024 * 1024,
+  },
 });
 
 // =========================
 // 5) Webhook Stripe
 // =========================
 app.post("/webhook/stripe", express.raw({ type: "application/json" }), async (req, res) => {
- try {
-   if (!webhookSecret) {
-     console.error("❌ Webhook secret manquant (.env)");
-     return res.status(500).send("Webhook secret manquant côté serveur");
-   }
+  try {
+    if (!webhookSecret) {
+      console.error("❌ Webhook secret manquant (.env)");
+      return res.status(500).send("Webhook secret manquant côté serveur");
+    }
 
-   const sig = req.headers["stripe-signature"];
+    const sig = req.headers["stripe-signature"];
 
-   const event = stripe.webhooks.constructEvent(
-     req.body,
-     sig,
-     webhookSecret
-   );
+    const event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      webhookSecret
+    );
 
-   if (event.type === "checkout.session.completed") {
-     const session = event.data.object;
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
 
-     if (session.payment_status !== "paid") {
-       return res.json({ received: true });
-     }
+      if (session.payment_status !== "paid") {
+        return res.json({ received: true });
+      }
 
-     if (session.metadata && session.metadata.kind === "rect") {
-       const payload = {
-         x: Number(session.metadata.x),
-         y: Number(session.metadata.y),
-         w: Number(session.metadata.w),
-         h: Number(session.metadata.h),
-         buyerEmail: session.metadata.buyerEmail,
-         name: session.metadata.name || "",
-         link: session.metadata.link || "",
-         logo: session.metadata.logo || "",
-         color: session.metadata.color || "#1e90ff",
-         msg: session.metadata.msg || "",
-       };
+      if (session.metadata && session.metadata.kind === "rect") {
+        const payload = {
+          x: Number(session.metadata.x),
+          y: Number(session.metadata.y),
+          w: Number(session.metadata.w),
+          h: Number(session.metadata.h),
+          buyerEmail: session.metadata.buyerEmail,
+          name: session.metadata.name || "",
+          link: session.metadata.link || "",
+          logo: session.metadata.logo || "",
+          color: session.metadata.color || "#1e90ff",
+          msg: session.metadata.msg || "",
+        };
 
-       console.log("🔥 Stripe webhook purchase received", payload);
+        console.log("🔥 Stripe webhook purchase received", payload);
 
-       const out = await fulfillRectDirect(payload);
+        const out = await fulfillRectDirect(payload);
 
-       console.log("FULFILL RESULT:", out);
+        console.log("FULFILL RESULT:", out);
 
-       if (!out.ok) {
-         console.error("❌ fulfill error:", out.error);
-       }
-     }
-   }
+        if (!out.ok) {
+          console.error("❌ fulfill error:", out.error);
+        }
+      }
+    }
 
-   return res.json({ received: true });
- } catch (err) {
-   console.error("Webhook error:", err.message);
-   return res.status(400).send(`Webhook Error: ${err.message}`);
- }
+    return res.json({ received: true });
+  } catch (err) {
+    console.error("Webhook error:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
 });
 
 // =========================
@@ -163,135 +173,155 @@ app.get("/about", (req, res) => res.sendFile(path.join(__dirname, "about.html"))
 app.use("/api", router);
 
 // =========================
-// 9) Upload image
+// 9) Upload image -> Cloudinary
 // =========================
-app.post("/api/upload-image", upload.single("image"), (req, res) => {
- try {
-   if (!req.file) {
-     return res.status(400).json({
-       ok: false,
-       error: "Aucune image reçue"
-     });
-   }
+app.post("/api/upload-image", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        ok: false,
+        error: "Aucune image reçue"
+      });
+    }
 
-   const BASE = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
-   const fileUrl = `${BASE}/uploads/${req.file.filename}`;
+    if (
+      !process.env.CLOUDINARY_CLOUD_NAME ||
+      !process.env.CLOUDINARY_API_KEY ||
+      !process.env.CLOUDINARY_API_SECRET
+    ) {
+      return res.status(500).json({
+        ok: false,
+        error: "Cloudinary non configuré côté serveur"
+      });
+    }
 
-   return res.json({
-     ok: true,
-     url: fileUrl,
-     filename: req.file.filename,
-   });
- } catch (e) {
-   console.error("upload error:", e);
-   return res.status(500).json({
-     ok: false,
-     error: "upload_error"
-   });
- }
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: "pixel-territory",
+      resource_type: "image"
+    });
+
+    // nettoyage du fichier temporaire local
+    try {
+      fs.unlinkSync(req.file.path);
+    } catch (cleanupErr) {
+      console.warn("⚠️ Impossible de supprimer le fichier local temporaire :", cleanupErr.message);
+    }
+
+    return res.json({
+      ok: true,
+      url: result.secure_url,
+      public_id: result.public_id
+    });
+  } catch (e) {
+    console.error("upload error:", e);
+    return res.status(500).json({
+      ok: false,
+      error: "upload_error"
+    });
+  }
 });
 
 // Gestion erreurs multer
 app.use((err, req, res, next) => {
- if (err instanceof multer.MulterError) {
-   if (err.code === "LIMIT_FILE_SIZE") {
-     return res.status(400).json({
-       ok: false,
-       error: "Image trop lourde (max 8 MB)"
-     });
-   }
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({
+        ok: false,
+        error: "Image trop lourde (max 8 MB)"
+      });
+    }
 
-   return res.status(400).json({
-     ok: false,
-     error: err.message
-   });
- }
+    return res.status(400).json({
+      ok: false,
+      error: err.message
+    });
+  }
 
- if (err && err.message) {
-   return res.status(400).json({
-     ok: false,
-     error: err.message
-   });
- }
+  if (err && err.message) {
+    return res.status(400).json({
+      ok: false,
+      error: err.message
+    });
+  }
 
- next();
+  next();
 });
 
 // =========================
 // 10) Stripe checkout
 // =========================
 app.post("/api/purchase-rect/checkout", async (req, res) => {
- try {
-   const body = req.body || {};
+  try {
+    const body = req.body || {};
 
-   if (!body.buyerEmail) {
-     return res.status(400).json({
-       ok: false,
-       error: "buyerEmail requis"
-     });
-   }
+    if (!body.buyerEmail) {
+      return res.status(400).json({
+        ok: false,
+        error: "buyerEmail requis"
+      });
+    }
 
-   const q = calcRectQuote(body);
+    const q = calcRectQuote(body);
 
-   if (!q.ok) {
-     return res.status(400).json({
-       ok: false,
-       error: q.error,
-       lotRule: q.lotRule
-     });
-   }
+    if (!q.ok) {
+      return res.status(400).json({
+        ok: false,
+        error: q.error,
+        lotRule: q.lotRule
+      });
+    }
 
-   const BASE = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
+    const BASE = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
 
-   const session = await stripe.checkout.sessions.create({
-     mode: "payment",
-     success_url: `${BASE}/success?session_id={CHECKOUT_SESSION_ID}`,
-     cancel_url: `${BASE}/cancel`,
-     customer_email: body.buyerEmail,
-     line_items: [
-       {
-         price_data: {
-           currency: q.currency || "eur",
-           product_data: {
-             name: `Pixel World Cup — Bloc ${q.w}×${q.h} (${q.x},${q.y})`,
-           },
-           unit_amount: q.totalCents,
-         },
-         quantity: 1,
-       },
-     ],
-     metadata: {
-       kind: "rect",
-       x: String(q.x),
-       y: String(q.y),
-       w: String(q.w),
-       h: String(q.h),
-       buyerEmail: body.buyerEmail,
-       name: (body.name || "").slice(0, 200),
-       link: (body.link || "").slice(0, 500),
-       logo: (body.logo || "").slice(0, 500),
-       color: (body.color || "").slice(0, 30),
-       msg: (body.msg || "").slice(0, 500),
-     },
-   });
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      success_url: `${BASE}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${BASE}/cancel`,
+      customer_email: body.buyerEmail,
+      line_items: [
+        {
+          price_data: {
+            currency: q.currency || "eur",
+            product_data: {
+              name: `Pixel World Cup — Bloc ${q.w}×${q.h} (${q.x},${q.y})`,
+            },
+            unit_amount: q.totalCents,
+          },
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        kind: "rect",
+        x: String(q.x),
+        y: String(q.y),
+        w: String(q.w),
+        h: String(q.h),
+        buyerEmail: body.buyerEmail,
+        name: (body.name || "").slice(0, 200),
+        link: (body.link || "").slice(0, 500),
+        logo: (body.logo || "").slice(0, 500),
+        color: (body.color || "").slice(0, 30),
+        msg: (body.msg || "").slice(0, 500),
+      },
+    });
 
-   return res.json({
-     ok: true,
-     url: session.url
-   });
- } catch (e) {
-   console.error(e);
-   return res.status(500).json({
-     ok: false,
-     error: "checkout_error"
-   });
- }
+    return res.json({
+      ok: true,
+      url: session.url
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({
+      ok: false,
+      error: "checkout_error"
+    });
+  }
 });
 
 // =========================
 // 11) Lancement serveur
 // =========================
 app.listen(PORT, "0.0.0.0", () => {
- console.log(`✅ Serveur prêt - Port ${PORT}`);
- console.log(`➡️ Site: [http://localhost:${PORT}/`)
+  console.log(`✅ Serveur prêt - Port ${PORT}`);
+  console.log(`➡️ Site: [http://localhost:${PORT}/`)
 });

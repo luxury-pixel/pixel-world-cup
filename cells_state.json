@@ -1002,6 +1002,23 @@
         "priceCents": 10000,
         "saleIndex": 1
       }
+    ],
+    "28:1": [
+      {
+        "ts": "2026-03-15T15:35:21.389Z",
+        "buyerEmail": "bill-ll@hotmail.com",
+        "name": "Donftsa",
+        "link": "https://donftsa.be/contact-us/",
+        "logo": "https://pixel-war-world-cup.onrender.com/uploads/1773588905362-398909100.png",
+        "color": "#1e90ff",
+        "msg": "",
+        "lotOriginX": 28,
+        "lotOriginY": 1,
+        "lotW": 1,
+        "lotH": 1,
+        "priceCents": 10000,
+        "saleIndex": 1
+      }
     ]
   }
 }
