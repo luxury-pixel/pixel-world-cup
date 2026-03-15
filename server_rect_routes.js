@@ -375,30 +375,75 @@ router.get("/stats", (req, res) => {
 router.get("/leaderboard", (req, res) => {
   try {
     const cells = STATE && STATE.cells ? STATE.cells : {};
-    const owners = new Map();
-    const countedLots = new Set();
+
+    const uniqueLots = new Map();
 
     for (const cellKey of Object.keys(cells)) {
       const history = Array.isArray(cells[cellKey]) ? cells[cellKey] : [];
       if (!history.length) continue;
 
       const last = history[history.length - 1];
+
       const lotKey = [
-        last.buyerEmail || "",
+        (last.buyerEmail || "").toLowerCase(),
         last.lotOriginX ?? "",
         last.lotOriginY ?? "",
         last.lotW ?? "",
-        last.lotH ?? ""
+        last.lotH ?? "",
+        last.ts || ""
       ].join("|");
 
-      if (countedLots.has(lotKey)) continue;
-      countedLots.add(lotKey);
-
-      const ownerKey = (last.buyerEmail || "").toLowerCase() || "anonymous";
-      if (!owners.has(ownerKey)) {
-        owners.set(ownerKey, {
+      if (!uniqueLots.has(lotKey)) {
+        uniqueLots.set(lotKey, {
           name: last.name || "Anonymous",
           buyerEmail: last.buyerEmail || "",
+          lotOriginX: Number(last.lotOriginX || 0),
+          lotOriginY: Number(last.lotOriginY || 0),
+          lotW: Number(last.lotW || 0),
+          lotH: Number(last.lotH || 0),
+          ts: last.ts || "",
+          investedCents: 0
+        });
+      }
+    }
+
+    for (const lot of uniqueLots.values()) {
+      let blockTotal = 0;
+
+      for (let yy = lot.lotOriginY; yy < lot.lotOriginY + lot.lotH; yy++) {
+        for (let xx = lot.lotOriginX; xx < lot.lotOriginX + lot.lotW; xx++) {
+          const k = keyOf(xx, yy);
+          const history = Array.isArray(cells[k]) ? cells[k] : [];
+          if (!history.length) continue;
+
+          const last = history[history.length - 1];
+
+          const sameLot =
+            (last.buyerEmail || "").toLowerCase() === (lot.buyerEmail || "").toLowerCase() &&
+            Number(last.lotOriginX) === lot.lotOriginX &&
+            Number(last.lotOriginY) === lot.lotOriginY &&
+            Number(last.lotW) === lot.lotW &&
+            Number(last.lotH) === lot.lotH &&
+            (last.ts || "") === (lot.ts || "");
+
+          if (sameLot) {
+            blockTotal += Number(last.priceCents || 0);
+          }
+        }
+      }
+
+      lot.investedCents = blockTotal;
+    }
+
+    const owners = new Map();
+
+    for (const lot of uniqueLots.values()) {
+      const ownerKey = (lot.buyerEmail || "").toLowerCase() || "anonymous";
+
+      if (!owners.has(ownerKey)) {
+        owners.set(ownerKey, {
+          name: lot.name || "Anonymous",
+          buyerEmail: lot.buyerEmail || "",
           blocks: 0,
           cells: 0,
           investedCents: 0
@@ -407,22 +452,8 @@ router.get("/leaderboard", (req, res) => {
 
       const owner = owners.get(ownerKey);
       owner.blocks += 1;
-      owner.cells += Number(last.lotW || 0) * Number(last.lotH || 0);
-
-      let latestBlockPrice = 0;
-      for (const sale of history) {
-        const sameLot =
-          sale.lotOriginX === last.lotOriginX &&
-          sale.lotOriginY === last.lotOriginY &&
-          sale.lotW === last.lotW &&
-          sale.lotH === last.lotH &&
-          (sale.buyerEmail || "").toLowerCase() === ownerKey;
-
-        if (sameLot) {
-          latestBlockPrice += Number(sale.priceCents || 0);
-        }
-      }
-      owner.investedCents += latestBlockPrice;
+      owner.cells += lot.lotW * lot.lotH;
+      owner.investedCents += lot.investedCents;
     }
 
     const leaderboard = Array.from(owners.values())
