@@ -106,6 +106,75 @@ function lastInfoForCell(x, y) {
   return hist[hist.length - 1];
 }
 
+// Clé stable d'un lot (sans ts)
+function stableLotKey(sale) {
+  return [
+    (sale.buyerEmail || "").toLowerCase(),
+    sale.lotOriginX ?? "",
+    sale.lotOriginY ?? "",
+    sale.lotW ?? "",
+    sale.lotH ?? ""
+  ].join("|");
+}
+
+// Reconstruit les lots uniques actuels à partir de STATE.cells
+function buildCurrentLots() {
+  const cells = STATE && STATE.cells ? STATE.cells : {};
+  const lots = new Map();
+
+  for (const cellKey of Object.keys(cells)) {
+    const history = Array.isArray(cells[cellKey]) ? cells[cellKey] : [];
+    if (!history.length) continue;
+
+    const last = history[history.length - 1];
+    const lotKey = stableLotKey(last);
+
+    if (!lots.has(lotKey)) {
+      lots.set(lotKey, {
+        key: lotKey,
+        name: last.name || "Anonymous",
+        buyerEmail: last.buyerEmail || "",
+        lotOriginX: Number(last.lotOriginX || 0),
+        lotOriginY: Number(last.lotOriginY || 0),
+        lotW: Number(last.lotW || 0),
+        lotH: Number(last.lotH || 0),
+        ts: last.ts || "",
+        cells: Number(last.lotW || 0) * Number(last.lotH || 0),
+        priceCents: 0
+      });
+    }
+  }
+
+  for (const lot of lots.values()) {
+    let total = 0;
+
+    for (let yy = lot.lotOriginY; yy < lot.lotOriginY + lot.lotH; yy++) {
+      for (let xx = lot.lotOriginX; xx < lot.lotOriginX + lot.lotW; xx++) {
+        const k = keyOf(xx, yy);
+        const history = Array.isArray(cells[k]) ? cells[k] : [];
+        if (!history.length) continue;
+
+        const last = history[history.length - 1];
+
+        const sameLot =
+          stableLotKey(last) === lot.key &&
+          Number(last.lotOriginX || 0) === lot.lotOriginX &&
+          Number(last.lotOriginY || 0) === lot.lotOriginY &&
+          Number(last.lotW || 0) === lot.lotW &&
+          Number(last.lotH || 0) === lot.lotH;
+
+        if (sameLot) {
+          total += Number(last.priceCents || 0);
+        }
+      }
+    }
+
+    lot.priceCents = total;
+  }
+
+  return Array.from(lots.values());
+}
+
 // --- RÈGLE DES LOTS -------------------------------------------------------
 function checkLotRuleAndCollect(rect) {
   const { x, y, w, h } = rect;
@@ -309,64 +378,43 @@ async function fulfillRectDirect(payload) {
 // --- STATS VIRALES --------------------------------------------------------
 router.get("/stats", (req, res) => {
   try {
-    const cells = STATE && STATE.cells ? STATE.cells : {};
-    const groupedSales = new Map();
-
-    for (const cellKey of Object.keys(cells)) {
-      const history = Array.isArray(cells[cellKey]) ? cells[cellKey] : [];
-
-      for (const sale of history) {
-        const saleKey = [
-          sale.ts || "",
-          sale.buyerEmail || "",
-          sale.lotOriginX ?? "",
-          sale.lotOriginY ?? "",
-          sale.lotW ?? "",
-          sale.lotH ?? ""
-        ].join("|");
-
-        if (!groupedSales.has(saleKey)) {
-          groupedSales.set(saleKey, {
-            ts: sale.ts || "",
-            name: sale.name || "Anonymous",
-            buyerEmail: sale.buyerEmail || "",
-            lotOriginX: sale.lotOriginX ?? 0,
-            lotOriginY: sale.lotOriginY ?? 0,
-            lotW: sale.lotW ?? 0,
-            lotH: sale.lotH ?? 0,
-            priceCents: 0
-          });
-        }
-
-        const entry = groupedSales.get(saleKey);
-        entry.priceCents += Number(sale.priceCents || 0);
-      }
-    }
-
-    const sales = Array.from(groupedSales.values());
+    const lots = buildCurrentLots();
 
     let totalCents = 0;
     let highestCents = 0;
 
-    for (const sale of sales) {
-      totalCents += sale.priceCents;
-      if (sale.priceCents > highestCents) highestCents = sale.priceCents;
+    for (const lot of lots) {
+      totalCents += Number(lot.priceCents || 0);
+      if (Number(lot.priceCents || 0) > highestCents) {
+        highestCents = Number(lot.priceCents || 0);
+      }
     }
 
-    sales.sort((a, b) => {
+    lots.sort((a, b) => {
       const ta = new Date(a.ts || 0).getTime();
       const tb = new Date(b.ts || 0).getTime();
       return tb - ta;
     });
 
+    const lastSales = lots.slice(0, 5).map((lot) => ({
+      ts: lot.ts || "",
+      name: lot.name || "Anonymous",
+      buyerEmail: lot.buyerEmail || "",
+      lotOriginX: lot.lotOriginX ?? 0,
+      lotOriginY: lot.lotOriginY ?? 0,
+      lotW: lot.lotW ?? 0,
+      lotH: lot.lotH ?? 0,
+      priceCents: Number(lot.priceCents || 0)
+    }));
+
     return res.json({
       ok: true,
       totalCents,
       highestCents,
-      lastSales: sales.slice(0, 5)
+      lastSales
     });
   } catch (e) {
-    console.error("❌ stats error:", e.message);
+    console.error("❌ stats error:", e);
     return res.status(500).json({ ok: false, error: "stats_error" });
   }
 });
@@ -374,70 +422,10 @@ router.get("/stats", (req, res) => {
 // --- LEADERBOARD ----------------------------------------------------------
 router.get("/leaderboard", (req, res) => {
   try {
-    const cells = STATE && STATE.cells ? STATE.cells : {};
-
-    const uniqueLots = new Map();
-
-    for (const cellKey of Object.keys(cells)) {
-      const history = Array.isArray(cells[cellKey]) ? cells[cellKey] : [];
-      if (!history.length) continue;
-
-      const last = history[history.length - 1];
-
-      const lotKey = [
-        (last.buyerEmail || "").toLowerCase(),
-        last.lotOriginX ?? "",
-        last.lotOriginY ?? "",
-        last.lotW ?? "",
-        last.lotH ?? "",
-        last.ts || ""
-      ].join("|");
-
-      if (!uniqueLots.has(lotKey)) {
-        uniqueLots.set(lotKey, {
-          name: last.name || "Anonymous",
-          buyerEmail: last.buyerEmail || "",
-          lotOriginX: Number(last.lotOriginX || 0),
-          lotOriginY: Number(last.lotOriginY || 0),
-          lotW: Number(last.lotW || 0),
-          lotH: Number(last.lotH || 0),
-          ts: last.ts || "",
-          investedCents: 0
-        });
-      }
-    }
-
-    for (const lot of uniqueLots.values()) {
-      let blockTotal = 0;
-
-      for (let yy = lot.lotOriginY; yy < lot.lotOriginY + lot.lotH; yy++) {
-        for (let xx = lot.lotOriginX; xx < lot.lotOriginX + lot.lotW; xx++) {
-          const k = keyOf(xx, yy);
-          const history = Array.isArray(cells[k]) ? cells[k] : [];
-          if (!history.length) continue;
-
-          const last = history[history.length - 1];
-
-          const sameLot =
-            (last.buyerEmail || "").toLowerCase() === (lot.buyerEmail || "").toLowerCase() &&
-            Number(last.lotOriginX) === lot.lotOriginX &&
-            Number(last.lotOriginY) === lot.lotOriginY &&
-            Number(last.lotW) === lot.lotW &&
-            Number(last.lotH) === lot.lotH &&
-            (last.ts || "") === (lot.ts || "");
-
-          if (sameLot) {
-            blockTotal += Number(last.priceCents || 0);
-          }
-        }
-      }
-
-      lot.investedCents = blockTotal;
-    }
-
+    const lots = buildCurrentLots();
     const owners = new Map();
 
-    for (const lot of uniqueLots.values()) {
+    for (const lot of lots) {
       const ownerKey = (lot.buyerEmail || "").toLowerCase() || "anonymous";
 
       if (!owners.has(ownerKey)) {
@@ -452,8 +440,8 @@ router.get("/leaderboard", (req, res) => {
 
       const owner = owners.get(ownerKey);
       owner.blocks += 1;
-      owner.cells += lot.lotW * lot.lotH;
-      owner.investedCents += lot.investedCents;
+      owner.cells += Number(lot.cells || 0);
+      owner.investedCents += Number(lot.priceCents || 0);
     }
 
     const leaderboard = Array.from(owners.values())
@@ -468,7 +456,7 @@ router.get("/leaderboard", (req, res) => {
       leaderboard
     });
   } catch (e) {
-    console.error("❌ leaderboard error:", e.message);
+    console.error("❌ leaderboard error:", e);
     return res.status(500).json({ ok: false, error: "leaderboard_error" });
   }
 });
