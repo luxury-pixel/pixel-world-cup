@@ -99,7 +99,8 @@
       background:#151934;
       width:calc(100*var(--cell) + 99*var(--gap));
       height:calc(100*var(--cell) + 99*var(--gap));
-      position:relative; z-index:1;
+      position:relative;
+      z-index:1;
     }
     .cell{
       width:var(--cell);height:var(--cell);
@@ -108,10 +109,18 @@
     }
     .cell:hover{background:#3b3f68}
     .sel{outline:1px solid #bcd1ff;}
-    .sold{background:#1e223f;border-color:#535a87;cursor:default;}
+    .sold{background:#1e223f;border-color:#535a87;cursor:pointer;}
+
     #selectionBox{
       position:absolute;pointer-events:none;border:2px dashed #7fb3ff;
       background:rgba(127,179,255,.15);display:none;z-index:5;
+    }
+
+    #artLayer{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      z-index:2;
     }
 
     footer{
@@ -203,7 +212,9 @@
 
 <div id="stage">
   <div id="gridWrap">
-    <div id="grid"></div>
+    <div id="grid">
+      <div id="artLayer"></div>
+    </div>
     <div id="selectionBox"></div>
   </div>
 </div>
@@ -222,7 +233,10 @@
       <input id="mLink" placeholder="[https://example.com"/]https://example.com"/>
     </div>
 
-    <div class="row"><label id="colorLabel">Couleur</label><input id="mColor" type="color" value="#1e90ff"/></div>
+    <div class="row">
+      <label id="colorLabel">Couleur</label>
+      <input id="mColor" type="color" value="#1e90ff"/>
+    </div>
 
     <div class="row">
       <label id="imageLabel">Image / Logo</label>
@@ -249,14 +263,14 @@
 <div id="errors"></div>
 
 <script>
-(function(){
+(function () {
   const box = document.getElementById('errors');
-  window.addEventListener('error', (e)=>{
-    box.style.display='block';
+  window.addEventListener('error', (e) => {
+    box.style.display = 'block';
     box.textContent = 'Erreur : ' + (e.error?.message || e.message || e.filename);
   });
-  window.addEventListener('unhandledrejection', (e)=>{
-    box.style.display='block';
+  window.addEventListener('unhandledrejection', (e) => {
+    box.style.display = 'block';
     box.textContent = 'Promise rejetée : ' + (e.reason?.message || e.reason || '');
   });
 })();
@@ -371,7 +385,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  function detectLang(){
+  function detectLang() {
     const saved = localStorage.getItem("pwc-lang");
     if (saved === "fr" || saved === "en") return saved;
     return navigator.language && navigator.language.toLowerCase().startsWith("fr") ? "fr" : "en";
@@ -380,16 +394,16 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentLang = detectLang();
   let t = translations[currentLang];
 
-  function tr(key){ return t[key] || key; }
+  function tr(key) { return t[key] || key; }
 
-  function formatMoney(cents){
+  function formatMoney(cents) {
     return (cents / 100).toLocaleString(
       currentLang === "fr" ? "fr-FR" : "en-US",
-      { style:'currency', currency:'EUR' }
+      { style: 'currency', currency: 'EUR' }
     );
   }
 
-  function applyTranslations(){
+  function applyTranslations() {
     t = translations[currentLang];
     document.documentElement.lang = currentLang;
 
@@ -432,37 +446,37 @@ document.addEventListener("DOMContentLoaded", () => {
     loadLeaderboard();
   }
 
-  document.getElementById("langFr").addEventListener("click", ()=>{
+  document.getElementById("langFr").addEventListener("click", () => {
     currentLang = "fr";
     localStorage.setItem("pwc-lang", currentLang);
     applyTranslations();
   });
 
-  document.getElementById("langEn").addEventListener("click", ()=>{
+  document.getElementById("langEn").addEventListener("click", () => {
     currentLang = "en";
     localStorage.setItem("pwc-lang", currentLang);
     applyTranslations();
   });
 
-  const COLS=100, ROWS=100, TOTAL=COLS*ROWS;
+  const COLS = 100, ROWS = 100, TOTAL = COLS * ROWS;
   const DEADLINE = new Date('2026-12-31T23:59:59+01:00');
 
-  const grid=document.getElementById('grid'),
-        gridWrap=document.getElementById('gridWrap'),
-        selectionBox=document.getElementById('selectionBox'),
-        buyBtn=document.getElementById('buyBtn'),
-        clearBtn=document.getElementById('clearSelBtn'),
-        zoom=document.getElementById('zoom'),
-        soldEl=document.getElementById('soldCount'),
-        freeEl=document.getElementById('freeCount'),
-        countdownEl=document.getElementById('countdown'),
-        modalWrap=document.getElementById('modalWrap'),
-        mEmail=document.getElementById('mEmail'),
-        selCountEl=document.getElementById('selCount'),
-        totalPriceEl=document.getElementById('totalPrice'),
-        lotRuleEl=document.getElementById('lotRule'),
-        confirmBtn=document.getElementById('confirmStripe'),
-        uploadStatus=document.getElementById('uploadStatus');
+  const grid = document.getElementById('grid'),
+    gridWrap = document.getElementById('gridWrap'),
+    selectionBox = document.getElementById('selectionBox'),
+    buyBtn = document.getElementById('buyBtn'),
+    clearBtn = document.getElementById('clearSelBtn'),
+    zoom = document.getElementById('zoom'),
+    soldEl = document.getElementById('soldCount'),
+    freeEl = document.getElementById('freeCount'),
+    countdownEl = document.getElementById('countdown'),
+    modalWrap = document.getElementById('modalWrap'),
+    mEmail = document.getElementById('mEmail'),
+    selCountEl = document.getElementById('selCount'),
+    totalPriceEl = document.getElementById('totalPrice'),
+    lotRuleEl = document.getElementById('lotRule'),
+    confirmBtn = document.getElementById('confirmStripe'),
+    uploadStatus = document.getElementById('uploadStatus');
 
   const selection = new Set();
   let LAST_GRID_DATA = null;
@@ -470,7 +484,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const stepPx = () => {
     const cell = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell')) || 14;
-    const gap  = parseInt(getComputedStyle(grid).gap) || 1;
+    const gap = parseInt(getComputedStyle(grid).gap) || 1;
     return cell + gap;
   };
 
@@ -483,10 +497,61 @@ document.addEventListener("DOMContentLoaded", () => {
     return `${x}:${y}`;
   };
 
-  (function buildGrid(){
+  function clearSelection() {
+    selection.clear();
+    grid.querySelectorAll('.cell.sel').forEach(n => n.classList.remove('sel'));
+    selectionBox.style.display = 'none';
+  }
+
+  function addCellToSelection(x, y) {
+    const id = `${x}:${y}`;
+    if (!selection.has(id)) {
+      selection.add(id);
+      const node = grid.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+      if (node) node.classList.add('sel');
+    }
+  }
+
+  function selectRect(rect, replace = true) {
+    if (!rect) return;
+    if (replace) clearSelection();
+
+    for (let y = rect.y; y < rect.y + rect.h; y++) {
+      for (let x = rect.x; x < rect.x + rect.w; x++) {
+        addCellToSelection(x, y);
+      }
+    }
+
+    updateUI(true);
+  }
+
+  function getCellInfo(x, y) {
+    const key = `${x}:${y}`;
+    const hist = LAST_GRID_DATA?.cells?.[key];
+    if (!Array.isArray(hist) || !hist.length) return null;
+    return hist[hist.length - 1];
+  }
+
+  function getLotRectFromInfo(info) {
+    if (!info) return null;
+    return {
+      x: Number(info.lotOriginX ?? info.x ?? 0),
+      y: Number(info.lotOriginY ?? info.y ?? 0),
+      w: Number(info.lotW ?? info.w ?? 1),
+      h: Number(info.lotH ?? info.h ?? 1)
+    };
+  }
+
+  function getLotRectAt(x, y) {
+    const info = getCellInfo(x, y);
+    if (!info) return null;
+    return getLotRectFromInfo(info);
+  }
+
+  (function buildGrid() {
     const frag = document.createDocumentFragment();
-    for(let y=0; y<ROWS; y++){
-      for(let x=0; x<COLS; x++){
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
         const d = document.createElement('div');
         d.className = 'cell';
         d.dataset.x = x;
@@ -499,12 +564,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
   grid.addEventListener('click', (e) => {
     const cell = e.target.closest('.cell');
-    if(!cell) return;
-    const id = `${cell.dataset.x}:${cell.dataset.y}`;
+    if (!cell) return;
+
+    const x = Number(cell.dataset.x);
+    const y = Number(cell.dataset.y);
+    const lotRect = getLotRectAt(x, y);
+
+    if (lotRect) {
+      selectRect(lotRect, true);
+      return;
+    }
+
+    const id = `${x}:${y}`;
 
     if (e.altKey) {
-      selection.clear();
-      grid.querySelectorAll('.cell.sel').forEach(n => n.classList.remove('sel'));
+      clearSelection();
     }
 
     if (selection.has(id)) {
@@ -519,19 +593,28 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   let dragging = false, startId = null;
+
   gridWrap.addEventListener('mousedown', (e) => {
     const id = idAtClientPoint(e.clientX, e.clientY);
     if (!id) return;
+
+    const [sx, sy] = id.split(':').map(Number);
+    const soldLot = getLotRectAt(sx, sy);
+
+    if (soldLot) {
+      selectRect(soldLot, true);
+      e.preventDefault();
+      return;
+    }
+
     dragging = true;
     startId = id;
 
     if (e.altKey) {
-      selection.clear();
-      grid.querySelectorAll('.cell.sel').forEach(n => n.classList.remove('sel'));
+      clearSelection();
     }
 
     const s = stepPx();
-    const [sx, sy] = startId.split(':').map(Number);
     selectionBox.style.display = 'block';
     selectionBox.style.left = (sx * s) + 'px';
     selectionBox.style.top = (sy * s) + 'px';
@@ -541,56 +624,56 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   window.addEventListener('mousemove', (e) => {
-    if(!dragging) return;
+    if (!dragging) return;
+
     const curId = idAtClientPoint(e.clientX, e.clientY);
-    if(!curId) return;
+    if (!curId) return;
 
     const s = stepPx();
     const [sx, sy] = startId.split(':').map(Number);
     const [cx, cy] = curId.split(':').map(Number);
     const x1 = Math.min(sx, cx), x2 = Math.max(sx, cx);
     const y1 = Math.min(sy, cy), y2 = Math.max(sy, cy);
+    const gap = parseInt(getComputedStyle(grid).gap) || 1;
 
     selectionBox.style.display = 'block';
     selectionBox.style.left = (x1 * s) + 'px';
     selectionBox.style.top = (y1 * s) + 'px';
-    selectionBox.style.width = ((x2 - x1 + 1) * s - (parseInt(getComputedStyle(grid).gap) || 1)) + 'px';
-    selectionBox.style.height = ((y2 - y1 + 1) * s - (parseInt(getComputedStyle(grid).gap) || 1)) + 'px';
+    selectionBox.style.width = ((x2 - x1 + 1) * s - gap) + 'px';
+    selectionBox.style.height = ((y2 - y1 + 1) * s - gap) + 'px';
 
-    for(let y=y1; y<=y2; y++){
-      for(let x=x1; x<=x2; x++){
-        const id = `${x}:${y}`;
-        if(!selection.has(id)){
-          selection.add(id);
-          const node = grid.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
-          if (node) node.classList.add('sel');
-        }
+    clearSelection();
+
+    for (let y = y1; y <= y2; y++) {
+      for (let x = x1; x <= x2; x++) {
+        addCellToSelection(x, y);
       }
     }
+
     updateUI(true);
   });
 
   window.addEventListener('mouseup', () => {
-    if(!dragging) return;
+    if (!dragging) return;
     dragging = false;
     startId = null;
     selectionBox.style.display = 'none';
   });
 
-  function currentRect(){
+  function currentRect() {
     if (selection.size === 0) return null;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for(const id of selection){
+    for (const id of selection) {
       const [x, y] = id.split(':').map(Number);
       minX = Math.min(minX, x);
       minY = Math.min(minY, y);
       maxX = Math.max(maxX, x);
       maxY = Math.max(maxY, y);
     }
-    return { x:minX, y:minY, w:maxX-minX+1, h:maxY-minY+1 };
+    return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
   }
 
-  function updateUI(resetPrice){
+  function updateUI(resetPrice) {
     const sold = (LAST_GRID_DATA && LAST_GRID_DATA.cells)
       ? Object.keys(LAST_GRID_DATA.cells).length
       : 0;
@@ -610,7 +693,7 @@ document.addEventListener("DOMContentLoaded", () => {
     buyBtn.disabled = qty === 0 || new Date() >= DEADLINE;
   }
 
-  (function tick(){
+  (function tick() {
     const ms = DEADLINE - new Date();
     if (ms <= 0) {
       countdownEl.textContent = tr("countdownEnded");
@@ -641,21 +724,20 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   clearBtn.addEventListener('click', () => {
-    selection.clear();
-    grid.querySelectorAll('.cell.sel').forEach(n => n.classList.remove('sel'));
+    clearSelection();
     updateUI(true);
   });
 
   const API_BASE = window.location.origin;
 
-  async function postJSON(url, body){
+  async function postJSON(url, body) {
     const r = await fetch(url, {
-      method:'POST',
-      headers:{'content-type':'application/json'},
-      body:JSON.stringify(body)
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body)
     });
     const data = await r.json().catch(() => ({}));
-    return { ok:r.ok, data };
+    return { ok: r.ok, data };
   }
 
   async function uploadImageIfNeeded() {
@@ -688,18 +770,18 @@ document.addEventListener("DOMContentLoaded", () => {
     return uploadedLogoUrl;
   }
 
-  async function loadGridState(){
-    try{
+  async function loadGridState() {
+    try {
       const r = await fetch(`${API_BASE}/api/cells?ts=${Date.now()}`);
       const data = await r.json();
       if (data && data.ok) renderSoldAndLogos(data);
-    }catch(e){
+    } catch (e) {
       console.warn('loadGridState error', e);
     }
   }
 
-  async function loadStats(){
-    try{
+  async function loadStats() {
+    try {
       const r = await fetch(`${API_BASE}/api/stats?ts=${Date.now()}`);
       const data = await r.json();
       if (!data.ok) return;
@@ -744,13 +826,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
         list.appendChild(li);
       }
-    }catch(e){
+    } catch (e) {
       console.warn("loadStats error", e);
     }
   }
 
-  async function loadLeaderboard(){
-    try{
+  async function loadLeaderboard() {
+    try {
       const r = await fetch(`${API_BASE}/api/leaderboard?ts=${Date.now()}`);
       const data = await r.json();
       if (!data.ok) return;
@@ -771,28 +853,24 @@ document.addEventListener("DOMContentLoaded", () => {
         li.textContent = `#${index + 1} ${row.name || tr("anonymous")} — ${row.cells} ${tr("cells")} — ${formatMoney(row.investedCents || 0)}`;
         list.appendChild(li);
       });
-    }catch(e){
+    } catch (e) {
       console.warn("loadLeaderboard error", e);
     }
   }
 
-  function renderSoldAndLogos(data){
+  function renderSoldAndLogos(data) {
     LAST_GRID_DATA = data;
 
-    const wrap = document.getElementById('gridWrap');
     const s = stepPx();
     const gap = parseInt(getComputedStyle(grid).gap) || 1;
 
     let art = document.getElementById('artLayer');
-    if (art) art.remove();
-
-    art = document.createElement('div');
-    art.id = 'artLayer';
-    art.style.position = 'absolute';
-    art.style.inset = '0';
-    art.style.pointerEvents = 'none';
-    art.style.zIndex = '2';
-    wrap.appendChild(art);
+    if (!art) {
+      art = document.createElement('div');
+      art.id = 'artLayer';
+      grid.appendChild(art);
+    }
+    art.innerHTML = '';
 
     grid.querySelectorAll('.cell.sold').forEach(n => n.classList.remove('sold'));
 
@@ -801,24 +879,35 @@ document.addEventListener("DOMContentLoaded", () => {
       const hist = data.cells[key];
       const info = Array.isArray(hist) ? hist[hist.length - 1] : null;
       if (!info) continue;
-      const lotKey = `${info.lotOriginX}:${info.lotOriginY}:${info.lotW}:${info.lotH}`;
+
+      const ox = Number(info.lotOriginX ?? info.x ?? 0);
+      const oy = Number(info.lotOriginY ?? info.y ?? 0);
+      const lw = Number(info.lotW ?? info.w ?? 1);
+      const lh = Number(info.lotH ?? info.h ?? 1);
+      const lotKey = `${ox}:${oy}:${lw}:${lh}`;
+
       if (!lots[lotKey]) lots[lotKey] = info;
     }
 
     for (const lotKey of Object.keys(lots)) {
       const info = lots[lotKey];
 
-      for (let yy = info.lotOriginY; yy < info.lotOriginY + info.lotH; yy++) {
-        for (let xx = info.lotOriginX; xx < info.lotOriginX + info.lotW; xx++) {
+      const ox = Number(info.lotOriginX ?? info.x ?? 0);
+      const oy = Number(info.lotOriginY ?? info.y ?? 0);
+      const lw = Number(info.lotW ?? info.w ?? 1);
+      const lh = Number(info.lotH ?? info.h ?? 1);
+
+      for (let yy = oy; yy < oy + lh; yy++) {
+        for (let xx = ox; xx < ox + lw; xx++) {
           const node = grid.querySelector(`.cell[data-x="${xx}"][data-y="${yy}"]`);
           if (node) node.classList.add('sold');
         }
       }
 
-      const left = info.lotOriginX * s;
-      const top  = info.lotOriginY * s;
-      const wpx  = info.lotW * s - gap;
-      const hpx  = info.lotH * s - gap;
+      const left = ox * s;
+      const top = oy * s;
+      const wpx = lw * s - gap;
+      const hpx = lh * s - gap;
 
       const box = document.createElement('div');
       box.style.position = 'absolute';
@@ -833,10 +922,10 @@ document.addEventListener("DOMContentLoaded", () => {
       box.style.background = info.color || '#1e90ff';
 
       box.dataset.link = info.link || '';
-      box.dataset.ox = info.lotOriginX;
-      box.dataset.oy = info.lotOriginY;
-      box.dataset.lw = info.lotW;
-      box.dataset.lh = info.lotH;
+      box.dataset.ox = ox;
+      box.dataset.oy = oy;
+      box.dataset.lw = lw;
+      box.dataset.lh = lh;
 
       if (info.logo) {
         const img = document.createElement('img');
@@ -857,7 +946,7 @@ document.addEventListener("DOMContentLoaded", () => {
     updateUI(false);
   }
 
-  gridWrap.addEventListener('dblclick', (e)=>{
+  gridWrap.addEventListener('dblclick', (e) => {
     const id = idAtClientPoint(e.clientX, e.clientY);
     if (!id) return;
     const [cx, cy] = id.split(':').map(Number);
@@ -881,12 +970,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (LAST_GRID_DATA) renderSoldAndLogos(LAST_GRID_DATA);
   });
 
-  async function refreshQuoteInModal(){
-    try{
+  async function refreshQuoteInModal() {
+    try {
       const rect = currentRect();
       const profitBox = document.getElementById("profitInfo");
 
-      if (!rect){
+      if (!rect) {
         totalPriceEl.textContent = '0 €';
         if (profitBox) profitBox.textContent = '';
         confirmBtn.disabled = true;
@@ -894,7 +983,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const buyerEmail = (mEmail.value || '').trim();
-      if(!buyerEmail){
+      if (!buyerEmail) {
         totalPriceEl.textContent = tr('enterEmailForQuote');
         if (profitBox) profitBox.textContent = '';
         confirmBtn.disabled = true;
@@ -904,10 +993,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const body = { ...rect, buyerEmail };
       const q = await postJSON(`${API_BASE}/api/purchase-rect/quote`, body);
 
-      if(!q.ok){
+      if (!q.ok) {
         totalPriceEl.textContent = '—';
-        lotRuleEl.textContent = q.data?.lotRule ? (tr('rulePrefix') + q.data.lotRule)
-                                                : (q.data?.error || tr('quoteError'));
+        lotRuleEl.textContent = q.data?.lotRule
+          ? (tr('rulePrefix') + q.data.lotRule)
+          : (q.data?.error || tr('quoteError'));
         if (profitBox) profitBox.textContent = '';
         confirmBtn.disabled = true;
         return;
@@ -925,7 +1015,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       confirmBtn.disabled = false;
-    }catch(e){
+    } catch (e) {
       totalPriceEl.textContent = '—';
       const profitBox = document.getElementById("profitInfo");
       if (profitBox) profitBox.textContent = '';
@@ -935,13 +1025,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   mEmail.addEventListener('input', refreshQuoteInModal);
 
-  confirmBtn.addEventListener('click', async ()=>{
+  confirmBtn.addEventListener('click', async () => {
     const rect = currentRect();
-    if(!rect){ alert(tr('selectCases')); return; }
-    if(new Date() >= DEADLINE){ alert(tr('competitionEnded')); return; }
+    if (!rect) { alert(tr('selectCases')); return; }
+    if (new Date() >= DEADLINE) { alert(tr('competitionEnded')); return; }
 
     const buyerEmail = (mEmail.value || '').trim();
-    if(!buyerEmail){ alert(tr('enterEmail')); return; }
+    if (!buyerEmail) { alert(tr('enterEmail')); return; }
 
     let logoUrl = "";
     try {
@@ -951,21 +1041,21 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const name  = (document.getElementById('mName').value || '').trim();
-    const link  = (document.getElementById('mLink').value || '').trim();
+    const name = (document.getElementById('mName').value || '').trim();
+    const link = (document.getElementById('mLink').value || '').trim();
     const color = (document.getElementById('mColor').value || '#1e90ff').trim();
-    const msg   = (document.getElementById('mMsg').value || '').trim();
+    const msg = (document.getElementById('mMsg').value || '').trim();
 
     const body = { ...rect, buyerEmail, name, link, logo: logoUrl, color, msg };
 
     const q = await postJSON(`${API_BASE}/api/purchase-rect/quote`, body);
-    if(!q.ok){
+    if (!q.ok) {
       alert(q.data?.lotRule || q.data?.error || tr('quoteRejected'));
       return;
     }
 
     const r = await postJSON(`${API_BASE}/api/purchase-rect/checkout`, body);
-    if(!r.ok || !r.data?.ok){
+    if (!r.ok || !r.data?.ok) {
       alert(r.data?.error || tr('paymentError'));
       return;
     }
@@ -977,8 +1067,8 @@ document.addEventListener("DOMContentLoaded", () => {
   loadStats();
   loadLeaderboard();
 
-  document.addEventListener('visibilitychange', ()=>{
-    if(!document.hidden) {
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
       loadGridState();
       loadStats();
       loadLeaderboard();
