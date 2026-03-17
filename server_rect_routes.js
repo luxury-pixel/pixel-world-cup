@@ -22,14 +22,15 @@ async function loadStateFromSupabase() {
   try {
     console.log("LOADING STATE FROM SUPABASE");
 
-    const result = await pool.query(`
-      SELECT cell_key, lot_origin_x, lot_origin_y, lot_w, lot_h,
-             buyer_email, name, link, logo, color, msg, price_cents, created_at
-      FROM pixel_purchases
-      ORDER BY created_at ASC, id ASC
-    `);
+const result = await pool.query(`
+  SELECT cell_key, lot_origin_x, lot_origin_y, lot_w, lot_h,
+         buyer_email, name, link, logo, color, msg, price_cents, created_at
+  FROM pixel_purchases
+  ORDER BY created_at ASC, id ASC
+`);
 
-    console.log("SUPABASE ROWS:", result.rows.length);
+console.log("SUPABASE ROWS:", result.rows.length);
+console.log("FIRST ROW:", result.rows[0]);
 
     const cells = {};
 
