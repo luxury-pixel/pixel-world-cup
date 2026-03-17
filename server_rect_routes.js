@@ -463,14 +463,14 @@ router.get("/leaderboard", (req, res) => {
 });
 
 // --- ROUTES HTTP ----------------------------------------------------------
-router.get("/cells", (req, res) => {
-  res.json({ ok: true, cells: STATE.cells });
-});
-
-router.post("/purchase-rect/quote", (req, res) => {
-  const q = calcRectQuote(req.body || {});
-  if (!q.ok) return res.status(400).json(q);
-  return res.json(q);
+router.get("/cells", async (req, res) => {
+  try {
+    await loadStateFromSupabase();
+    return res.json({ ok: true, cells: STATE.cells });
+  } catch (e) {
+    console.error("❌ /cells error:", e);
+    return res.status(500).json({ ok: false, error: "cells_error" });
+  }
 });
 
 module.exports = {
