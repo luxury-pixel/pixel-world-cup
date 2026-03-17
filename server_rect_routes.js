@@ -465,16 +465,30 @@ router.get("/leaderboard", (req, res) => {
 // --- ROUTES HTTP ----------------------------------------------------------
 router.get("/cells", async (req, res) => {
   try {
-    await loadStateFromSupabase();
-    return res.json({ ok: true, cells: STATE.cells });
-  } catch (e) {
-    console.error("❌ /cells error:", e);
-    return res.status(500).json({ ok: false, error: "cells_error" });
+    const result = await pool.query("SELECT * FROM pixel_purchases");
+
+    const cells = {};
+
+    for (const row of result.rows) {
+      if (!row.cell_key) continue;
+
+      cells[row.cell_key] = {
+        color: row.color,
+        buyer_email: row.buyer_email,
+        name: row.name,
+        link: row.link,
+        logo: row.logo,
+        msg: row.msg,
+        price_cents: row.price_cents,
+      };
+    }
+
+    console.log("CELLS GENERATED:", Object.keys(cells).length);
+
+    return res.json({ ok: true, cells });
+
+  } catch (err) {
+    console.error("❌ API cells error:", err);
+    return res.status(500).json({ ok: false });
   }
 });
-
-module.exports = {
-  router,
-  calcRectQuote,
-  fulfillRectDirect
-};
