@@ -50,8 +50,15 @@ console.log("FIRST ROW:", result.rows[0]);
         priceCents: row.price_cents
       };
 
-      if (!cells[row.cell_key]) cells[row.cell_key] = [];
-      cells[row.cell_key].push(event);
+cells[row.cell_key] = {
+  color: row.color || "#1e90ff",
+  buyer_email: row.buyer_email,
+  name: row.name,
+  link: row.link,
+  logo: row.logo,
+  msg: row.msg,
+  price_cents: row.price_cents
+};
     }
 
     STATE.cells = cells;
