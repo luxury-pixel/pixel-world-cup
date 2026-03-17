@@ -1,7 +1,13 @@
 const { Pool } = require("pg");
 
-console.log("DATABASE_URL:", process.env.DATABASE_URL);
+// 🔒 Log sécurisé (optionnel)
+const dbUrl = process.env.DATABASE_URL;
+if (dbUrl) {
+  const safeUrl = dbUrl.replace(/:(.*?)@/, ":****@");
+  console.log("DATABASE_URL (safe):", safeUrl);
+}
 
+// 🔗 Connexion PostgreSQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
@@ -9,6 +15,7 @@ const pool = new Pool({
   },
 });
 
+// ❗ Gestion des erreurs
 pool.on("error", (err) => {
   console.error("❌ PostgreSQL pool error:", err);
 });
