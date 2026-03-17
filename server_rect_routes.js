@@ -465,30 +465,23 @@ router.get("/leaderboard", (req, res) => {
 // --- ROUTES HTTP ----------------------------------------------------------
 router.get("/cells", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM pixel_purchases");
-
-    const cells = {};
-
-    for (const row of result.rows) {
-      if (!row.cell_key) continue;
-
-      cells[row.cell_key] = {
-        color: row.color,
-        buyer_email: row.buyer_email,
-        name: row.name,
-        link: row.link,
-        logo: row.logo,
-        msg: row.msg,
-        price_cents: row.price_cents,
-      };
-    }
-
-    console.log("CELLS GENERATED:", Object.keys(cells).length);
-
-    return res.json({ ok: true, cells });
-
+    await loadStateFromSupabase();
+    console.log("CELLS GENERATED:", Object.keys(STATE.cells).length);
+    return res.json({ ok: true, cells: STATE.cells });
   } catch (err) {
     console.error("❌ API cells error:", err);
-    return res.status(500).json({ ok: false });
+    return res.status(500).json({ ok: false, error: "cells_error" });
   }
 });
+
+router.post("/purchase-rect/quote", (req, res) => {
+  const q = calcRectQuote(req.body || {});
+  if (!q.ok) return res.status(400).json(q);
+  return res.json(q);
+});
+
+module.exports = {
+  router,
+  calcRectQuote,
+  fulfillRectDirect
+};
