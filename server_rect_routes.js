@@ -22,15 +22,15 @@ async function loadStateFromSupabase() {
   try {
     console.log("LOADING STATE FROM SUPABASE");
 
-const result = await pool.query(`
-  SELECT cell_key, lot_origin_x, lot_origin_y, lot_w, lot_h,
-         buyer_email, name, link, logo, color, msg, price_cents, created_at
-  FROM pixel_purchases
-  ORDER BY created_at ASC, id ASC
-`);
+    const result = await pool.query(`
+      SELECT cell_key, lot_origin_x, lot_origin_y, lot_w, lot_h,
+             buyer_email, name, link, logo, color, msg, price_cents, created_at
+      FROM pixel_purchases
+      ORDER BY created_at ASC, id ASC
+    `);
 
-console.log("SUPABASE ROWS:", result.rows.length);
-console.log("FIRST ROW:", result.rows[0]);
+    console.log("SUPABASE ROWS:", result.rows.length);
+    console.log("FIRST ROW:", result.rows[0]);
 
     const cells = {};
 
@@ -50,15 +50,8 @@ console.log("FIRST ROW:", result.rows[0]);
         priceCents: row.price_cents
       };
 
-cells[row.cell_key] = {
-  color: row.color || "#1e90ff",
-  buyer_email: row.buyer_email,
-  name: row.name,
-  link: row.link,
-  logo: row.logo,
-  msg: row.msg,
-  price_cents: row.price_cents
-};
+      if (!cells[row.cell_key]) cells[row.cell_key] = [];
+      cells[row.cell_key].push(event);
     }
 
     STATE.cells = cells;
