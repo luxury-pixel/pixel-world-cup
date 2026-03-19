@@ -30,10 +30,10 @@ cloudinary.config({
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
 if (!stripeSecretKey) {
-  console.error("❌ STRIPE_SECRET_KEY manquante dans .env");
+  console.error("❌ STRIPE_SECRET_KEY manquante dans l'environnement");
 }
 
-const stripe = Stripe(stripeSecretKey || "");
+const stripe = new Stripe(stripeSecretKey || "");
 
 // =========================
 // 2) Webhook secret
@@ -44,7 +44,13 @@ const webhookSecret =
   process.env.STRIPE_WEBHOOK_SIGNING_SECRET;
 
 // =========================
-// 3) Dossier uploads
+// 3) Base URL publique
+// =========================
+const PUBLIC_BASE_URL =
+  process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
+
+// =========================
+// 4) Dossier uploads
 // =========================
 const uploadsDir = path.join(__dirname, "uploads");
 
@@ -53,7 +59,7 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // =========================
-// 4) Multer config
+// 5) Multer config
 // =========================
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -62,7 +68,6 @@ const storage = multer.diskStorage({
 
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname || "").toLowerCase();
-
     const safeExt = [".png", ".jpg", ".jpeg", ".webp", ".gif"].includes(ext)
       ? ext
       : ".png";
@@ -91,25 +96,30 @@ const upload = multer({
 });
 
 // =========================
-// 5) Webhook Stripe
+// 6) Webhook Stripe
+// IMPORTANT: avant express.json()
 // =========================
 app.post("/webhook/stripe", express.raw({ type: "application/json" }), async (req, res) => {
   try {
     if (!webhookSecret) {
-      console.error("❌ Webhook secret manquant (.env)");
+      console.error("❌ Webhook secret manquant");
       return res.status(500).send("Webhook secret manquant côté serveur");
     }
 
     const sig = req.headers["stripe-signature"];
+    const event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
 
-    const event = stripe.webhooks.constructEvent(
-      req.body,
-      sig,
-      webhookSecret
-    );
+    console.log("✅ Webhook Stripe reçu:", event.type);
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
+
+      console.log("🧾 Session checkout complétée:", {
+        id: session.id,
+        payment_status: session.payment_status,
+        livemode: session.livemode,
+        metadata: session.metadata,
+      });
 
       if (session.payment_status !== "paid") {
         return res.json({ received: true });
@@ -129,27 +139,27 @@ app.post("/webhook/stripe", express.raw({ type: "application/json" }), async (re
           msg: session.metadata.msg || "",
         };
 
-        console.log("🔥 Stripe webhook purchase received", payload);
+        console.log("🔥 Achat reçu depuis Stripe webhook:", payload);
 
         const out = await fulfillRectDirect(payload);
 
-        console.log("FULFILL RESULT:", out);
+        console.log("✅ FULFILL RESULT:", out);
 
         if (!out.ok) {
-          console.error("❌ fulfill error:", out.error);
+          console.error("❌ fulfill error:", out.error || out);
         }
       }
     }
 
     return res.json({ received: true });
   } catch (err) {
-    console.error("Webhook error:", err.message);
+    console.error("❌ Webhook error:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 });
 
 // =========================
-// 6) Middlewares JSON
+// 7) Middlewares JSON
 // =========================
 app.use(cors());
 app.use(express.json());
@@ -160,7 +170,7 @@ app.use(express.static(__dirname));
 app.use("/uploads", express.static(uploadsDir));
 
 // =========================
-// 7) Pages
+// 8) Pages
 // =========================
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
 app.get("/success", (req, res) => res.sendFile(path.join(__dirname, "success.html")));
@@ -168,19 +178,19 @@ app.get("/cancel", (req, res) => res.sendFile(path.join(__dirname, "cancel.html"
 app.get("/about", (req, res) => res.sendFile(path.join(__dirname, "about.html")));
 
 // =========================
-// 8) API routes existantes
+// 9) API routes existantes
 // =========================
 app.use("/api", router);
 
 // =========================
-// 9) Upload image -> Cloudinary
+// 10) Upload image -> Cloudinary
 // =========================
 app.post("/api/upload-image", upload.single("image"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
         ok: false,
-        error: "Aucune image reçue"
+        error: "Aucune image reçue",
       });
     }
 
@@ -191,32 +201,31 @@ app.post("/api/upload-image", upload.single("image"), async (req, res) => {
     ) {
       return res.status(500).json({
         ok: false,
-        error: "Cloudinary non configuré côté serveur"
+        error: "Cloudinary non configuré côté serveur",
       });
     }
 
     const result = await cloudinary.uploader.upload(req.file.path, {
       folder: "pixel-territory",
-      resource_type: "image"
+      resource_type: "image",
     });
 
-    // nettoyage du fichier temporaire local
     try {
       fs.unlinkSync(req.file.path);
     } catch (cleanupErr) {
-      console.warn("⚠️ Impossible de supprimer le fichier local temporaire :", cleanupErr.message);
+      console.warn("⚠️ Impossible de supprimer le fichier temporaire :", cleanupErr.message);
     }
 
     return res.json({
       ok: true,
       url: result.secure_url,
-      public_id: result.public_id
+      public_id: result.public_id,
     });
   } catch (e) {
-    console.error("upload error:", e);
+    console.error("❌ upload error:", e);
     return res.status(500).json({
       ok: false,
-      error: "upload_error"
+      error: "upload_error",
     });
   }
 });
@@ -227,20 +236,20 @@ app.use((err, req, res, next) => {
     if (err.code === "LIMIT_FILE_SIZE") {
       return res.status(400).json({
         ok: false,
-        error: "Image trop lourde (max 8 MB)"
+        error: "Image trop lourde (max 8 MB)",
       });
     }
 
     return res.status(400).json({
       ok: false,
-      error: err.message
+      error: err.message,
     });
   }
 
   if (err && err.message) {
     return res.status(400).json({
       ok: false,
-      error: err.message
+      error: err.message,
     });
   }
 
@@ -248,7 +257,7 @@ app.use((err, req, res, next) => {
 });
 
 // =========================
-// 10) Stripe checkout
+// 11) Stripe checkout
 // =========================
 app.post("/api/purchase-rect/checkout", async (req, res) => {
   try {
@@ -257,7 +266,7 @@ app.post("/api/purchase-rect/checkout", async (req, res) => {
     if (!body.buyerEmail) {
       return res.status(400).json({
         ok: false,
-        error: "buyerEmail requis"
+        error: "buyerEmail requis",
       });
     }
 
@@ -267,23 +276,23 @@ app.post("/api/purchase-rect/checkout", async (req, res) => {
       return res.status(400).json({
         ok: false,
         error: q.error,
-        lotRule: q.lotRule
+        lotRule: q.lotRule,
       });
     }
 
-    const BASE = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
+    console.log("🛒 Création checkout Stripe avec base URL:", PUBLIC_BASE_URL);
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      success_url: `${BASE}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${BASE}/cancel`,
+      success_url: `${PUBLIC_BASE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${PUBLIC_BASE_URL}/cancel`,
       customer_email: body.buyerEmail,
       line_items: [
         {
           price_data: {
             currency: q.currency || "eur",
             product_data: {
-              name: `Pixel World Cup — Bloc ${q.w}×${q.h} (${q.x},${q.y})`,
+              name: `Pixel Territory — Bloc ${q.w}x${q.h} (${q.x},${q.y})`,
             },
             unit_amount: q.totalCents,
           },
@@ -305,23 +314,30 @@ app.post("/api/purchase-rect/checkout", async (req, res) => {
       },
     });
 
+    console.log("✅ Session Stripe créée:", {
+      id: session.id,
+      livemode: session.livemode,
+      url: session.url,
+    });
+
     return res.json({
       ok: true,
-      url: session.url
+      url: session.url,
     });
   } catch (e) {
-    console.error(e);
+    console.error("❌ checkout_error:", e);
     return res.status(500).json({
       ok: false,
-      error: "checkout_error"
+      error: "checkout_error",
     });
   }
 });
 
 // =========================
-// 11) Lancement serveur
+// 12) Lancement serveur
 // =========================
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`✅ Serveur prêt - Port ${PORT}`);
-  console.log(`➡️ Site: [http://localhost:${PORT}/`)
+  console.log(`➡️ Site public: ${PUBLIC_BASE_URL}`);
 });
+
