@@ -1,3 +1,4 @@
+throw new Error("TEST SERVER");
 // server.js
 const express = require("express");
 const dotenv = require("dotenv");
@@ -9,6 +10,9 @@ const Stripe = require("stripe");
 const { v2: cloudinary } = require("cloudinary");
 
 dotenv.config();
+console.log("SERVER VERSION = CLAIMAPIXEL-LIVE-001");
+console.log("PUBLIC_BASE_URL =", process.env.PUBLIC_BASE_URL);
+console.log("STRIPE KEY PREFIX =", (process.env.STRIPE_SECRET_KEY || "").slice(0, 7));
 
 const { router, calcRectQuote, fulfillRectDirect } = require("./server_rect_routes.js");
 
