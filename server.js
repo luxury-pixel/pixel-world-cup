@@ -9,9 +9,13 @@ const Stripe = require("stripe");
 const { v2: cloudinary } = require("cloudinary");
 
 dotenv.config();
+
 console.log("SERVER VERSION = CLAIMAPIXEL-LIVE-001");
 console.log("PUBLIC_BASE_URL =", process.env.PUBLIC_BASE_URL);
-console.log("STRIPE KEY PREFIX =", (process.env.STRIPE_SECRET_KEY || "").slice(0, 7));
+console.log(
+  "STRIPE KEY PREFIX =",
+  (process.env.STRIPE_SECRET_KEY || "").slice(0, 7)
+);
 
 const { router, calcRectQuote, fulfillRectDirect } = require("./server_rect_routes.js");
 
@@ -110,6 +114,7 @@ app.post("/webhook/stripe", express.raw({ type: "application/json" }), async (re
     }
 
     const sig = req.headers["stripe-signature"];
+
     const event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
 
     console.log("✅ Webhook Stripe reçu:", event.type);
@@ -216,7 +221,10 @@ app.post("/api/upload-image", upload.single("image"), async (req, res) => {
     try {
       fs.unlinkSync(req.file.path);
     } catch (cleanupErr) {
-      console.warn("⚠️ Impossible de supprimer le fichier temporaire :", cleanupErr.message);
+      console.warn(
+        "⚠️ Impossible de supprimer le fichier temporaire :",
+        cleanupErr.message
+      );
     }
 
     return res.json({
@@ -343,4 +351,3 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`✅ Serveur prêt - Port ${PORT}`);
   console.log(`➡️ Site public: ${PUBLIC_BASE_URL}`);
 });
-
