@@ -1,4 +1,3 @@
-throw new Error("TEST SERVER");
 // server.js
 const express = require("express");
 const dotenv = require("dotenv");
