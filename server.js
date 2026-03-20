@@ -292,6 +292,9 @@ app.post("/api/purchase-rect/checkout", async (req, res) => {
     }
 
     console.log("🛒 Création checkout Stripe avec base URL:", PUBLIC_BASE_URL);
+    console.log("🔥 STRIPE MODE DEBUG:", {
+      key: (stripeSecretKey || "").slice(0, 10),
+    });
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -325,6 +328,7 @@ app.post("/api/purchase-rect/checkout", async (req, res) => {
       },
     });
 
+    console.log("🔥 SESSION MODE:", session.livemode);
     console.log("✅ Session Stripe créée:", {
       id: session.id,
       livemode: session.livemode,
@@ -343,6 +347,7 @@ app.post("/api/purchase-rect/checkout", async (req, res) => {
     });
   }
 });
+
 
 // =========================
 // 12) Lancement serveur
