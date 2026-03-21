@@ -263,7 +263,7 @@
 <div id="errors"></div>
 
 <script>
-(function () {
+(function() {
   const box = document.getElementById('errors');
   window.addEventListener('error', (e) => {
     box.style.display = 'block';
@@ -1059,6 +1059,9 @@ document.addEventListener("DOMContentLoaded", () => {
       alert(r.data?.error || tr('paymentError'));
       return;
     }
+
+    console.log("CHECKOUT URL =", r.data.url);
+    alert("CHECKOUT URL = " + r.data.url);
 
     window.location.href = r.data.url;
   });
